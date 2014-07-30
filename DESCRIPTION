@@ -1,0 +1,13 @@
+Package: sparseMVN
+Type: Package
+Title: Multivariate normal functions for sparse covariate and precision matrices.
+Version: 0.1.0
+Date: 2013-11-05
+Author: Michael Braun
+Maintainer: Michael Braun <braunm@smu.edu>
+Description: Computes multivariate normal (MVN) densities, and
+	     samples from MVN distributions, when the covariance or 
+	     precision matrix is sparse.
+License: MPL (>= 2.0)
+Depends: Matrix (>= 1.1.0), R (>= 3.0.2)
+Suggests: mvtnorm, reshape2, plyr

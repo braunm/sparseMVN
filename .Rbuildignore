@@ -1,0 +1,5 @@
+.*DS_Store
+.*Rhistory
+inst/doc/sparseMVN-vignette.tex
+inst/examples/export_table.R
+nobuild

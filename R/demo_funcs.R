@@ -1,0 +1,86 @@
+
+.mvnSparse.compare <- function(N, m, p, k, prec) {
+
+    require(mvtnorm)
+    
+    ## N  number of draws
+    ## p  heterogeneous variables
+    ## k  population variables
+    ## m  number of agents
+    mu <- rep(0,p*m+k)  ## assume mean at origin
+    Q1 <- tril(kronecker(Matrix(seq(0.1,p,length=p*p),p,p),diag(m)))
+    Q2 <- cBind(Q1,Matrix(0,m*p,k))
+    Q3 <- rBind(Q2,cBind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
+    CV <- tcrossprod(Q3)
+    
+    ct <- system.time(chol.CV <- Cholesky(CV))  ## creates a dCHMsimpl object
+    CV.dense <- as(CV,"matrix")  ## dense covariance, for use with mvtnorm package
+    PR.dense <- solve(CV.dense)
+    if (prec) sigma <- PR.dense else sigma <- CV.dense
+    
+    ## draw random samples using rmvn.sparse
+    tr.sp <- system.time(x.sp <- rmvn.sparse(N, mu, chol.CV,prec=prec))
+    
+    ## computing log densities using dmvn.sparse
+    
+    td.sp <- system.time(d.sp <- dmvn.sparse(x.sp, mu, chol.CV, prec=prec))
+    
+    ## computing same log densities using dmvnorm 
+    td.dens <- system.time(d.dens <- dmvnorm(x.sp,mu,sigma,log=TRUE))
+    
+    ## sampling a comparable matrix using rmvnorm
+    tr.dens <- system.time(x.dens <- rmvnorm(N, mu, sigma, method="chol"))
+    
+    res <- c(tr.sp["elapsed"],
+             tr.dens["elapsed"],
+             td.sp["elapsed"],
+             td.dens["elapsed"],
+             ct["elapsed"],
+             all.equal(d.sp, d.dens))
+    names(res) <- c("r.sparse","r.dense","d.sparse","d.dense","chol.time","density.check")
+    return(res)             
+}
+
+
+
+.run.compare <- function(rep,N.vec, m.vec, p.vec, k.vec) {
+
+    require(reshape2)
+    
+    nN <- length(N.vec)
+    nm <- length(m.vec)
+    np <- length(p.vec)
+    nk <- length(k.vec)
+    
+    res <- array(dim=c(nN,nm,np,nk,2,6))
+    dimnames(res) <- list(N=N.vec, m=m.vec,
+                          p=p.vec, k=k.vec,
+                          matrix=c("cov","prec"),
+                          stat=c("r.sparse","r.dense","d.sparse","d.dense",
+                              "chol.time", "density.check")                      
+                          )
+    
+    for (ix in 1:nN) {
+        n <- N.vec[ix]
+        for (mx in 1:nm) {
+            m <- m.vec[mx]
+            for (px in 1:np) {
+                p <- p.vec[px]
+                for (kx in 1:nk) {
+                    k <- k.vec[kx]
+                    for (prec in 0:1) {
+                        res[ix,mx,px,kx,(prec+1),] <- .mvnSparse.compare(n,m,p,k, prec=as.logical(prec))
+                    }
+                }
+            }
+        }
+    }
+    
+    
+    res <- dcast(melt(res),matrix+p+k+m+N~stat)
+    return(transform(res,rep=rep))
+}
+
+
+
+
