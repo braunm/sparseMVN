@@ -1,6 +1,6 @@
 
-N <- 100 ## number of samples
-m <- 1000  ## number of blocks in sparse covariance matrix
+N <- 50 ## number of samples
+m <- 300  ## number of blocks in sparse covariance matrix
 p <- 3 ## size of each block
 k <- 15  ## 
 prec <- FALSE

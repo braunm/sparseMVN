@@ -102,7 +102,7 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
         y <- A$L %*% x
     }
 
-    y <- as(crossprod(A$P,y),"matrix") ## P' %*% y
+    y <- as(Matrix::crossprod(A$P,y),"matrix") ## P' %*% y
 
     y <- y + mu
 
@@ -138,20 +138,21 @@ dmvn.sparse <- function(x, mu, CH, prec=TRUE) {
     }
 
     A <- expand(CH)
-    detL <- sum(log(diag(A$L)))
+
+    detL <- sum(log(Matrix::diag(A$L)))
     C <- -0.918938533204672669541*k ## -k*log(2*pi)/2
 
 
     xmu <- t(x)-mu
 
-    z <- A$P %*% xmu
+    z <- as.matrix(A$P %*% xmu)
 
     if (prec) {
-        y <- crossprod(A$L,z)  ## L' %*% x
+        y <- Matrix::crossprod(A$L,z)  ## L' %*% x
         log.dens <- C + detL - colSums(y*y)/2
     } else {
         y <- solve(A$L, z) ## Ly = x
-        log.dens <- C - detL - colSums(y*y)/2
+        log.dens <- C - detL - Matrix::colSums(y*y)/2
     }
 
     return(as.numeric(log.dens))
