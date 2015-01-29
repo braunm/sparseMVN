@@ -97,7 +97,7 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
     A <- expand(CH)
 
     if (prec) {
-        y <- solve(t(A$L),x) ## L'y = x
+        y <- solve(Matrix::t(A$L),x) ## L'y = x
     } else {
         y <- A$L %*% x
     }
@@ -149,7 +149,7 @@ dmvn.sparse <- function(x, mu, CH, prec=TRUE) {
 
     if (prec) {
         y <- Matrix::crossprod(A$L,z)  ## L' %*% x
-        log.dens <- C + detL - colSums(y*y)/2
+        log.dens <- C + detL - Matrix::colSums(y*y)/2
     } else {
         y <- solve(A$L, z) ## Ly = x
         log.dens <- C - detL - Matrix::colSums(y*y)/2
