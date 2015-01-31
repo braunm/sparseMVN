@@ -11,33 +11,57 @@ vignette: >
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
+ This vignette summarizes run times for sampling from, and computing
+ the log density of, an MVN random variable using functions from the
+ *sparseMVN* package (this one), and the *mvtnorm* package.  For all
+ of these tests, the covariance/precision matrices have the 
+ "block-arrow" structure of a hierarchical model with $p$
+ heterogeneous variables across $m$ units, and $k$ population
+ variables.  Times are expressed in seconds elapsed for $N$ samples.
+ Since the *sparseMVN* functions require a Cholesky decomposition of
+ the covariance/precision matrix, we include the time to compute that
+ as well.  Also, we present the time required to invert the dense
+ matrix, since that step is necessary to convert a precision matrix to
+ a covariance matrix when using the *mvtnorm* functions.
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE)
 options(digits=4)
 ```
 
+The following function is called for each combination of $N$, $m$,
+$k$, $p$ and $prec$.
 
 ```{r, echo=FALSE}
+require(plyr)
+require(dplyr)
+require(Matrix)
+require(mvtnorm)
 
-.mvnSparse.compare <- function(N, m, p, k, prec) {
+compare <- function(D) {
 
-    require(mvtnorm)
-    
-    ## N  number of draws
-    ## p  heterogeneous variables
-    ## k  population variables
-    ## m  number of agents
+    N <- D$N ## number of draws
+    p <-  D$p ## heterogeneous variables
+    k <- D$k ## population variables
+    m <- D$m ## number of agents
+    prec <- D$prec
+
     mu <- rep(0,p*m+k)  ## assume mean at origin
     Q1 <- tril(kronecker(Matrix(seq(0.1,p,length=p*p),p,p),diag(m)))
     Q2 <- cBind(Q1,Matrix(0,m*p,k))
     Q3 <- rBind(Q2,cBind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
-    CV <- tcrossprod(Q3)
-    
-    ct <- system.time(chol.CV <- Cholesky(CV))  ## creates a dCHMsimpl object
-    CV.dense <- as(CV,"matrix")  ## dense covariance, for use with mvtnorm package
-    PR.dense <- solve(CV.dense)
-    if (prec) sigma <- PR.dense else sigma <- CV.dense
+    CV.sparse <- tcrossprod(Q3)
+    CV.dense <- as(CV.sparse,"matrix")  ## dense covariance
+
+    ## creates a dCHMsimpl object
+    chol.time <- system.time(chol.CV <- Cholesky(CV.sparse)) 
+
+    if (prec) {
+        solve.time <- system.time(sigma <- solve(CV.dense))
+    } else {
+        solve.time <- NA
+        sigma <- CV.dense
+    }
     
     ## draw random samples using rmvn.sparse
     tr.sp <- system.time(x.sp <- rmvn.sparse(N, mu, chol.CV,prec=prec))
@@ -51,104 +75,55 @@ options(digits=4)
     ## sampling a comparable matrix using rmvnorm
     tr.dens <- system.time(x.dens <- rmvnorm(N, mu, sigma, method="chol"))
     
-    res <- data.frame(r.sparse=tr.sp["elapsed"],
-                      r.dense=tr.dens["elapsed"],
-                      d.sparse=td.sp["elapsed"],
-                      d.dense=td.dens["elapsed"],
-                      chol.time=ct["elapsed"],
-                      density.check=all.equal(d.sp, d.dens)
-                      )
-##    names(res) <- c("r.sparse","r.dense","d.sparse","d.dense","chol.time","density.check")
+    res <- data.frame(
+        N=N, m=m, p=p, k=k, prec=prec, r.sparse=tr.sp["elapsed"],
+        r.dense=tr.dens["elapsed"],
+        d.sparse=td.sp["elapsed"],
+        d.dense=td.dens["elapsed"],
+        chol.time=chol.time["elapsed"],
+        solve.time=solve.time["elapsed"],
+        density.check=as.logical(all.equal(d.sp, d.dens))
+    )
     return(res)             
 }
-
-.wrap <- function(D) {
-    res <- .mvnSparse.compare(D$N, D$m, D$p, D$k, D$prec)
-    res <- transform(res, rep=D$rep)
-    return(res)
-}
-
-
-.run.compare <- function(rep,N.vec, m.vec, p.vec, k.vec) {
-
-    require(reshape2)
-    
-    nN <- length(N.vec)
-    nm <- length(m.vec)
-    np <- length(p.vec)
-    nk <- length(k.vec)
-    
-    res <- array(dim=c(nN,nm,np,nk,2,6))
-    dimnames(res) <- list(N=N.vec, m=m.vec,
-                          p=p.vec, k=k.vec,
-                          matrix=c("cov","prec"),
-                          stat=c("r.sparse","r.dense","d.sparse","d.dense",
-                              "chol.time", "density.check")                      
-                          )
-    
-    for (ix in 1:nN) {
-        n <- N.vec[ix]
-        for (mx in 1:nm) {
-            m <- m.vec[mx]
-            for (px in 1:np) {
-                p <- p.vec[px]
-                for (kx in 1:nk) {
-                    k <- k.vec[kx]
-                    for (prec in 0:1) {
-                        res[ix,mx,px,kx,(prec+1),] <- .mvnSparse.compare(n,m,p,k, prec=as.logical(prec))
-                    }
-                }
-            }
-        }
-    }
-    
-    
-    res <- dcast(melt(res),matrix+p+k+m+N~stat)
-    return(transform(res,rep=rep))
-}
-
-
-
 ```
+
+We set levels for each factor, and run multiple reps of `compare`,
+averaging across reps.
+
+```{r, cache=TRUE}
+D <- expand.grid(rep=1:3,
+                 N=c(8),
+                 m=c(5,10),
+                 p=c(2,3),
+                 k=c(5,6),
+                 prec=c(FALSE, TRUE)
+                 )
+
+R <- ddply(D, c("rep","N","m","p","k","prec"), compare) %>%
+    group_by(N, m, p, k, prec) %>%
+        summarize(sample.sparse=mean(r.sparse),
+                  sample.dense=mean(r.dense),
+                  density.sparse=mean(d.sparse),
+                  density.dense=mean(d.dense),
+                  cholesky.sparse=mean(chol.time),
+                  inverse.dense=mean(solve.time)
+                  )
+```
+
+Now let's put the table together.
 
 ```{r}
-require(plyr)
-require(dplyr)
-require(Matrix)
-N.vec <- c(200)
-m.vec <- c(25, 250, 500)
-p.vec <- c(2,5)
-k.vec <- c(15)
-prec.vec <- c(FALSE, TRUE)
-reps <- 5
-
-D <- expand.grid(1:reps, N.vec, m.vec, p.vec, k.vec, prec.vec)
-names(D) <- c("rep","N", "m", "p", "k", "prec")
-
-R <- ddply(D, c("rep","N","m","p","k","prec"), .wrap)
-
-
-
-## uses functions in R/demo_funcs.R
-
-## R <- ldply(1:reps,function(i) .run.compare(i,N.vec,m.vec,p.vec,k.vec),
-##            .parallel=FALSE)
-
-tmp <- R %>% group_by(N, m, p, k, prec) %>%
-    summarize(r.sparse=mean(r.sparse),
-              r.dense=mean(r.dense),
-              d.sparse=mean(d.sparse),
-              d.dense=mean(d.dense),
-              chol.time=mean(chol.time)
-              )
-
-
-tmp <- melt(R,id.vars=c("rep","matrix","m","N","p","k"))
-tab <- dcast(tmp,matrix+p+k+m+N~variable,
-             fun.aggregate=mean)
-tab
+require(tidyr)
+tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense, cholesky.sparse, inverse.dense)) %>%
+    separate(val, c("stat","method")) %>%
+        spread(method, time)
+tab <- tmp %>% filter(stat %in% c("sample","density")) %>%
+    select(-N) %>%
+        select(stat, m, p, k, prec, dense, sparse)
 ```
 
+Not sure the best way to order this yet.
 
 
 #References
