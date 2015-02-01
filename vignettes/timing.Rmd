@@ -124,6 +124,3 @@ tab <- tmp %>% filter(stat %in% c("sample","density")) %>%
 ```
 
 Not sure the best way to order this yet.
-
-
-#References

@@ -58,15 +58,13 @@
 #'    CH <- Cholesky(V)
 #' 
 #'    x <- rmvn.sparse(10,rep(0,p*m+k),CH, FALSE)
-#'    print(x)
+#'  ##  print(x)
 #' 
 #'    y <- dmvn.sparse(x[1,],rep(0,p*m+k), CH, FALSE)
-#'    print(y)
+#'  ##  print(y)
 #' }
 #'
 #' @export
-
-
 rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
 
     if (is.na(match(class(CH),c("dCHMsimpl","dCHMsuper")))) {
@@ -110,6 +108,8 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
 
 }
 
+#' @rdname rmvn.sparse
+#' @export
 dmvn.sparse <- function(x, mu, CH, prec=TRUE) {
 
 

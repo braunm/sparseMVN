@@ -25,20 +25,28 @@ test_that("sparseMVN", {
 
     ## sample N MVN's
 
-    prec <- FALSE
-    x.sp <- rmvn.sparse(N, mu, chol.CV,prec=prec)
+    for (prec in c(FALSE, TRUE)) {
+        x.sp <- rmvn.sparse(N, mu, chol.CV,prec=prec)
+        
+        ## check dimensions
+        
+        ## each row is a draw
+        ## each col is a variable
+        expect_equal(NROW(x.sp), N)  
+        expect_equal(NCOL(x.sp), length(mu))  
+        
+        ## computing log densities using dmvn.sparse
+        d.sp <- dmvn.sparse(x.sp, mu, chol.CV, prec=prec)
 
-    ## check dimensions
-
-    expect_equal(NROW(x.sp), N)  ## each row is a draw
-    expect_equal(NCOL(x.sp), length(mu))  ## each col is a variable
-    
-    ## computing log densities using dmvn.sparse
-    d.sp <- dmvn.sparse(x.sp[1,], mu, chol.CV, prec=prec)
-
-    ## computing log densities using dmvnorm
-    d.dns <- dmvnorm(x.sp[1,], mu, CV.base, log=TRUE)
-
-    expect_equal(d.sp, d.dns)
-
+        if (prec) {
+            mat <- solve(CV.base)
+        } else {
+            mat <- CV.base
+        }
+         
+        ## computing log densities using dmvnorm
+        d.dns <- dmvnorm(x.sp, mu, mat, log=TRUE)
+        expect_equal(d.sp, d.dns)
+        }
 })
+          
