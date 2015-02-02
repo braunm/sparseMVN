@@ -26,7 +26,7 @@ vignette: >
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE)
-options(digits=4)
+options(digits=3)
 ```
 
 The following function is called for each combination of $N$, $m$,
@@ -92,22 +92,24 @@ We set levels for each factor, and run multiple reps of `compare`,
 averaging across reps.
 
 ```{r, cache=TRUE}
-D <- expand.grid(rep=1:3,
-                 N=c(8),
-                 m=c(5,10),
-                 p=c(2,3),
-                 k=c(5,6),
+require(doParallel)
+registerDoParallel(cores=12)
+D <- expand.grid(rep=1:12,
+                 N=c(20),
+                 m=c(10,100,1000),
+                 p=c(2,5),
+                 k=c(3),
                  prec=c(FALSE, TRUE)
                  )
 
-R <- ddply(D, c("rep","N","m","p","k","prec"), compare) %>%
+R <- ddply(D, c("rep","N","m","p","k","prec"), compare, .parallel=TRUE) %>%
     group_by(N, m, p, k, prec) %>%
         summarize(sample.sparse=mean(r.sparse),
                   sample.dense=mean(r.dense),
                   density.sparse=mean(d.sparse),
                   density.dense=mean(d.dense),
-                  cholesky.sparse=mean(chol.time),
-                  inverse.dense=mean(solve.time)
+                  cholesky=mean(chol.time),
+                  inverse=mean(solve.time)
                   )
 ```
 
@@ -115,12 +117,31 @@ Now let's put the table together.
 
 ```{r}
 require(tidyr)
-tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense, cholesky.sparse, inverse.dense)) %>%
+##tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense, cholesky.sparse, inverse.dense)) %>%
+tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense)) %>%
+
     separate(val, c("stat","method")) %>%
-        spread(method, time)
-tab <- tmp %>% filter(stat %in% c("sample","density")) %>%
-    select(-N) %>%
-        select(stat, m, p, k, prec, dense, sparse)
+        spread(method, time) %>%
+            mutate(nnz=(m+1)*p^2 + 2*k*m*p,
+                   nels=(m*p+k)^2,
+                   pct.nnz=nnz/nels
+                   )
 ```
 
-Not sure the best way to order this yet.
+First, let's compare times for sampling from an MVN.
+
+```{r}
+require(knitr)
+tab.samp <- tmp %>% filter(stat %in% c("sample") & prec==FALSE) %>%
+    select(-N) %>%
+        select(m, p, k, pct.nnz, dense, sparse, cholesky)
+kable(tab.samp)
+```
+
+
+```{r}
+tab.dens <- tmp %>% filter(stat %in% c("density") & prec==FALSE) %>%
+    select(-N) %>%
+        select(m, p, k, pct.nnz, dense, sparse)
+kable(tab.dens)
+```
