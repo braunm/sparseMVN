@@ -47,6 +47,7 @@ zero.
 
 
 ```{r, echo=FALSE}
+require(sparseMVN)
 require(Matrix)
 require(mvtnorm)
 N <- 5
