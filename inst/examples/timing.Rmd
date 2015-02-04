@@ -2,14 +2,9 @@
 title: Timing comparison
 author:  Michael Braun
 date:  "`r Sys.Date()`"
-output:  rmarkdown::html_vignette
-bibliography:  /Users/braunm/ownCloud/References/Papers/braun_refs_utf.bib
+output:  rmarkdown::pdf_document
 header-includes:
   \usepackage{amsmath}
-vignette: >
-  %\VignetteIndexEntry{Using sparseMVN}
-  %\VignetteEngine{knitr::rmarkdown}
-  \usepackage[utf8]{inputenc}
 ---
  This vignette summarizes run times for sampling from, and computing
  the log density of, an MVN random variable using functions from the
@@ -107,7 +102,7 @@ k <- 3 ## variables in the margin, or "arrowhead"
 prec <- c(FALSE, TRUE)  ## a covariance (FALSE) or precision (TRUE) matrix?
 ```
 
-```{r}
+```{r, cache=TRUE}
 D <- expand.grid(rep=1:12, N=N, m=m,
                  p=p, k=k, prec=prec)
 R <- ddply(D, c("rep","N","m","p","k","prec"), compare, .parallel=TRUE) %>%
