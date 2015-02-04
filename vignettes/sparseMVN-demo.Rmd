@@ -19,8 +19,20 @@ options(digits=4)
 The *sparseMVN* package provides functions to sample from a
 multivariate normal (MVN) distribution, and compute its density, when the
 covariance or precision matrix is sparse.  By exploiting this
-sparsity, we can handle high-dimensional distributions quickly, with
-lower memory usage.
+sparsity, we can reduce the amount of computational resources that are
+needed for matrix storage, and for linear algebra routines like matrix-vector multiplication, solving linear systems, and
+computing Cholesky factors.  Sparse matrix structures store only the
+row and column indices, and the values, of the non-zero elements of
+the matrix. All other elements are assumed to be zero, so they do not
+need to be stored explicitly.  Many linear algebra libraries, such as
+those called by the *Matrix* package, include routines that are
+optimized for sparse matrices.  These routines are much faster than
+their dense matrix counterparts because they effectively skip over
+atomic operations that involve the zeros in the matrices.
+
+# Background
+
+## What makes a matrix "sparse"
 
 By "sparse matrix," we mean a matrix for which relatively few elements
 are non-zero. One situation in which sparse covariance/precision matrices occur is
@@ -80,12 +92,12 @@ storing the covariance or precision matrix in a compressed format without
 explicit zeros, and applying linear algebra routines that are
 optimized for those sparse matrix structures.  The *Matrix*
 package calls sparse linear algebra routines that are implemented in
-the *CHOLMOD* library [@ChenDavis2008; DavisHager1999; DavisHager2009]; more information about these routines is available there.
+the *CHOLMOD* library
+[@ChenDavis2008; @DavisHager1999; @DavisHager2009]; more information
+about these routines is available there.
 
 
-
-
-## Sampling from, and computing densities of, MVN random variables
+## Why linear algebra matters for MVN random variables
 
 To see why using linear algebra algorithms that are optimized for
 sparse matrices is useful, let's first look at how one would, in
@@ -107,18 +119,13 @@ There are three linear algebra operations involved:
 2.  Multiplying the triangular matrix $L$ by vector $z$; and
 3.  Adding $\mu$ to $Lz$.
 
-If $\Sigma$ is stored as a typical, base **R** dense matrix, then the computation time for a
-Cholesky decomposition grows _cubicly_, and the
-time to multiply $L$ and $z$ grows quadratically, with the dimension
-of $X$ [@GolubVanLoan1996]. Thus, sampling from a
-high dimensional MVN is not, in general, scalable.
-
 The `rmvnorm` function in the *mvtnorm* package [@R_mvtnorm] uses this
 algorithm, taking $\Sigma$, as a base **R** matrix, as one of the
-arguments.  At _each call_ to `rmvnorm`, $\Sigma$ is factored as either
-an eigenvalue, singular value, or Cholesky decomposition.  Thus,
-`rmvnorm` can be quite resource-intensive for large $X$, especially if
-the function is called repeatedly.
+arguments.  _Each call_ to `rmvnorm` factors $\Sigma$.  If $\Sigma$ is stored as a typical, base **R** dense matrix, then the computation time for a
+Cholesky decomposition grows _cubicly_, and the
+time to multiply $L$ and $z$ grows quadratically, with the dimension
+of $X$ [@GolubVanLoan1996].   Thus, `rmvnorm` can be quite
+resource-intensive for large $X$, especially if the function is called repeatedly.
 
 Computing the density of MVN draws faces similar scalability
 problems.  The density of the MVN distribution is
@@ -126,20 +133,28 @@ $$
 f(x)=(2\pi)^{-\frac{k}{2}}|\Sigma|^{-\frac{1}{2}}\exp\left[-\frac{1}{2}\left(x-\mu\right)'\Sigma^{-1}\left(x-\mu\right)\right]
 $$
 
-As with generating MVN samples, computing the density requires a
-matrix factorization that, as above, grows in complexity at a rate
-cubic to $q$.  The determinant of $\Sigma$ is the square of the product of the diagonal elements of $L$.  In addition, $\Sigma^{-1}=(LL')^{-1}=L'^{-1}L^{-1}$.  If we define $y=L^{-1}(x-\mu)$, we can write the log density of $x$ as
+$\Sigma^{-1}=(LL')^{-1}=L'^{-1}L^{-1}$.  If we define $y=L^{-1}(x-\mu)$, we can write the log density of $x$ as
 $$
   \log f(x)=-\frac{k}{2}\log(2\pi)-\log|L|-\frac{1}{2}y'y
 $$
 
-Computing $y$ involves solving a triangular linear system $Ly=(x-\mu)$, the
-complexity of which grows quadratically with $q$.  This is how the
-`dmvnorm` function in *mvtnorm* computes the density.  Like `rmvnorm`,
-`dmvnorm` is resource-intensive for high dimensional $X$.
+As with generating MVN samples, computing the density requires a
+matrix factorization that, as above, grows in complexity at a rate
+cubic to $q$.  The determinant of $\Sigma$ is the square of the
+product of the diagonal elements of $L$.  Computing $y$ involves
+solving a triangular linear system $Ly=(x-\mu)$, the complexity of
+which grows quadratically with $q$.  The `dmvnorm` function in
+*mvtnorm* computes the density this way, so, like `rmvnorm`, it is resource-intensive for high dimensional $X$.
+
+The exact amount of time and memory that are saved by saving the
+covariance/precision matrix in a sparse format depends on the sparsity
+pattern.  But for the hierarchical model example from earlier in this
+section, the number of non-zero elements grows only linearly with
+$N$.  The result is that all of the steps of sampling from an MVN also
+grow linearly with $N$.  Section 4 of @BraunDamien2014 explains why this is so.
 
 
-## Using the sparseMVN package
+# Using the sparseMVN package
 
 The *sparseMVN* package provides `rmvn.sparse` and `dmvn.sparse` as alternatives to
 `rmvnorm` and `dmvnorm`.  The signatures are
@@ -157,7 +172,7 @@ the *Matrix* package.  The `prec` argument identifies if CH is the
 decomposition of either the covariance ($\Sigma$, `prec=FALSE`) or
 precision ($\Sigma^{-1}$, `prec=TRUE`) matrix.  These functions do
 require the user to compute the Cholesky decomposition beforehand, but
-this needs to be done only once.
+this needs to be done only once (as long as $\Sigma$ does not change).
 
 More details about the `Cholesky` function are available in the
 *Matrix* package, but it is a simple function to use.  The first
@@ -169,13 +184,14 @@ arguments.  If `Cholesky` uses a fill-reducing permutation to compute
 additional user intervention required.
 
 Do not use the `chol`
-function in base **R**.  `Cholesky` is designed for decomposing sparse
-matrices; there's lots of other information in there that I do not
-want to go into just yet.
+function in base **R**.  `Cholesky` is designed for decomposing _sparse_
+matrices, which involves permuting rows and columns to maintain
+sparsity of the factor.  The `dCHMsimple` and `dCHMsuper` objects
+store this permutation, which `rmvn.sparse` and `dmvn.sparse` need.
 
 ### An example
 
-Suppose we want to generate 10 samples from $X$, where $X\sim
+Suppose we want to generate $R$ samples from $X$, where $X\sim
 MVN(\mu,\Sigma)$, and the structure of $\Sigma$ is defined by our
 example model. In the following code, we first construct the mean vector $\mu$.
 Then, we construct a random "block arrow"
@@ -189,7 +205,7 @@ set.seed(123)
 N <- 5  ## number of blocks in sparse covariance matrix
 p <- 2 ## size of each block
 k <- 2  ##
-ndraws <- 10
+R <- 10
     
 ## mean vector
 mu <- seq(-3,3,length=k*N+p)
@@ -212,7 +228,7 @@ is the decomposition of a *covariance* matrix, and not a precision matrix.
 ```{r, collapse=TRUE}
 chol.Sigma <- Matrix::Cholesky(Sigma)  ## creates a dCHMsimpl object
 str(chol.Sigma)
-x <- rmvn.sparse(ndraws, mu, chol.Sigma, prec=FALSE)
+x <- rmvn.sparse(R, mu, chol.Sigma, prec=FALSE)
 ```
 Each row of `x` is a sample, and each column is a variable.
 
@@ -234,7 +250,6 @@ $$
   \log f(x)=-\frac{k}{2}\log(2\pi)+|\Lambda|-\frac{1}{2}y'y
 $$
 
-
 By setting the argument `prec=TRUE`, `rmvn.sparse` and `dmvn.sparse` will
 recognize the Cholesky decomposition as being for a *precision* matrix
 instead of a covariance matrix.  Without this option, the user would
@@ -242,6 +257,48 @@ need to explicitly invert $\Sigma$ beforehand.  Even if \$Sigma^{-1}*
 were sparse, there is no guarantee that $\Sigma$ would be (and vice
 versa).  `rmvn.sparse` and `dmvn.sparse` let the user work with either
 the covariance or precision matrix, depending on which is more convenient.
+
+# Timing
+A timing comparison is available as a separate vignette.
+
+
+# Other packages for creating and using sparse matrices
+
+## sparseHessianFD
+
+Suppose you have a objective function that has a sparse Hessian (e.g.,
+the log posterior density for a hierarchical model).  You have an
+**R** function that computes the value of the objective, and another
+function that computes its gradient.  You may also need the Hessian,
+either for a nonlinear optimization routine, or as the negative
+precision matrix of an MVN approximation.
+
+It's hard enough to get the gradient, but the derivation of the
+Hessian might be too tedious or complicated for it to be worthwhile.
+However, it should not be too hard to identify which elements of the
+Hessian are non-zero.  If you have both the gradient, and the Hessian
+*pattern*, then you can use the *sparseHessianFD* package
+[@R_sparseHessianFD]to estimate the Hessian itself.
+
+The *sparseHessianFD* package estimates the Hessian numerically, but in a
+way that exploits the fact that the Hessian is sparse, and that the
+pattern is known.  The package contains functions that return the
+Hessian as a sparse `dgCMatrix`.  This object can be coerced into a
+`dsCMatrix`, which in turn can be used by `rmvn.sparse` and
+`dmvn.sparse`.
+
+## trustOptim
+
+The *trustOptim* package provides a nonlinear optimization routine
+that takes the Hessian as a sparse `dgCMatrix` object.  This optimizer
+is useful for unconstrained optimization of a high-dimensional
+objective function with a sparse Hessian.  It uses a trust region
+algorithm, which may be more stable and robust than line search
+approaches.  Also, it applies a stopping rule based on the norm of the
+gradient, as opposed to whether the algorithm makes "sufficient
+progress."  (Many optimizers, especially `optim` in base **R**, stop
+too early, before the gradient is truly flat).
+
 
 
 #References

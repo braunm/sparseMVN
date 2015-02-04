@@ -17,12 +17,8 @@ vignette: >
  of these tests, the covariance/precision matrices have the 
  "block-arrow" structure of a hierarchical model with $p$
  heterogeneous variables across $m$ units, and $k$ population
- variables.  Times are expressed in seconds elapsed for $N$ samples.
- Since the *sparseMVN* functions require a Cholesky decomposition of
- the covariance/precision matrix, we include the time to compute that
- as well.  Also, we present the time required to invert the dense
- matrix, since that step is necessary to convert a precision matrix to
- a covariance matrix when using the *mvtnorm* functions.
+ variables.  The "using sparseMVN" vignettes describes this sparsity
+ pattern in more detail.
 
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE)
@@ -32,7 +28,7 @@ options(digits=3)
 The following function is called for each combination of $N$, $m$,
 $k$, $p$ and $prec$.
 
-```{r, echo=FALSE}
+```{r}
 require(plyr)
 require(dplyr)
 require(Matrix)
@@ -89,19 +85,31 @@ compare <- function(D) {
 ```
 
 We set levels for each factor, and run multiple reps of `compare`,
-averaging across reps.
+averaging across reps. For each test, we will draw, or compute the density for, $N$
+samples.  The covariance or precision matrix will have a block-arrow
+structure, with $m$ blocks.  Each block is $p \times p$, and
+there are $k$ variables in the "arrowhead," or margin, of the matrix.
 
-```{r, cache=TRUE}
+Each rep is run in parallel using the
+*doParallel* package.  You may need to change the method of
+parallelization or the number of cores.
+
+Computation times (in seconds) were generated on a 2013-era Mac Pro, with 12 2.7GHz
+Xeon E5 processors and 64GB of RAM.
+
+```{r}
 require(doParallel)
 registerDoParallel(cores=12)
-D <- expand.grid(rep=1:12,
-                 N=c(20),
-                 m=c(10,100,1000),
-                 p=c(2,5),
-                 k=c(3),
-                 prec=c(FALSE, TRUE)
-                 )
+N <- 50 ## number of samples
+m <- c(20, 200, 1000, 2000)  ## number of heterogeneous units
+p <- 3 ## size of each "block"
+k <- 3 ## variables in the margin, or "arrowhead"
+prec <- c(FALSE, TRUE)  ## a covariance (FALSE) or precision (TRUE) matrix?
+```
 
+```{r}
+D <- expand.grid(rep=1:12, N=N, m=m,
+                 p=p, k=k, prec=prec)
 R <- ddply(D, c("rep","N","m","p","k","prec"), compare, .parallel=TRUE) %>%
     group_by(N, m, p, k, prec) %>%
         summarize(sample.sparse=mean(r.sparse),
@@ -113,14 +121,14 @@ R <- ddply(D, c("rep","N","m","p","k","prec"), compare, .parallel=TRUE) %>%
                   )
 ```
 
-Now let's put the table together.
+Now let's put the table together.  First, let's compare times for
+sampling from an MVN, when providing a covariance matrix.
+
 
 ```{r}
 require(tidyr)
-##tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense, cholesky.sparse, inverse.dense)) %>%
-tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, density.dense)) %>%
-
-    separate(val, c("stat","method")) %>%
+tmp <- gather(R, val, time, c(sample.sparse, sample.dense, density.sparse, density.dense))
+tmp <- separate(tmp, val, c("stat","method")) %>%
         spread(method, time) %>%
             mutate(nnz=(m+1)*p^2 + 2*k*m*p,
                    nels=(m*p+k)^2,
@@ -128,20 +136,66 @@ tmp <- R %>% gather(val, time, c(sample.sparse, sample.dense, density.sparse, de
                    )
 ```
 
-First, let's compare times for sampling from an MVN.
-
 ```{r}
 require(knitr)
 tab.samp <- tmp %>% filter(stat %in% c("sample") & prec==FALSE) %>%
     select(-N) %>%
-        select(m, p, k, pct.nnz, dense, sparse, cholesky)
+        select(m, pct.nnz, dense, sparse)
 kable(tab.samp)
 ```
+
+We see that as the percentage of non-zero elements goes down, there is
+more time savings from using `rmvn.sparse` over `rmvnorm`.
+
+There is a similar pattern when computing the log density.
 
 
 ```{r}
 tab.dens <- tmp %>% filter(stat %in% c("density") & prec==FALSE) %>%
     select(-N) %>%
-        select(m, p, k, pct.nnz, dense, sparse)
+        select(m, pct.nnz, dense, sparse)
 kable(tab.dens)
 ```
+
+These patterns hold if we were to provide the precision matrix instead
+of the covariance matrix.  First, the random sampling times:
+
+```{r}
+tab.samp <- tmp %>% filter(stat %in% c("sample") & prec==TRUE) %>%
+    select(-N) %>%
+        select(m, pct.nnz, dense, sparse)
+kable(tab.samp)
+```
+
+And now, the log density times:
+
+
+```{r}
+tab.dens <- tmp %>% filter(stat %in% c("density") & prec==TRUE) %>%
+    select(-N) %>%
+        select(m, pct.nnz, dense, sparse)
+kable(tab.dens)
+```
+
+The *sparseMVN* functions require a Cholesky decomposition of
+the covariance/precision matrix. However, the *mvtnorm* functions
+require a matrix inversion when converting a precision matrix to a
+covariance matrix.  The following table summarizes the times of each
+of those steps.  Of course, if we start with a covariance matrix, no
+inversion is necessary to use the *mvtnorm* functions.
+
+
+```{r}
+tab2 <- tmp %>% filter(stat=="density") %>%
+    select(prec, m, pct.nnz, cholesky, inverse) %>%
+        arrange(prec, m)
+kable(tab2)
+```
+
+Thus, we see that the time needed for a sparse Cholesky decomposition
+is neglible, even for large matrices.  However, the time it takes to
+create a dense covariance matrix by inverting a dense precision matrix
+can be quite substantial.  Thus, if you are starting with a sparse
+precision matrix, the efficiency gains from using *sparseMVN* over
+*mvtnorm* also include the avoidance of this additional matrix
+inversion step.
