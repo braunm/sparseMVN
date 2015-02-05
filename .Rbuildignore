@@ -14,4 +14,3 @@ data-raw/*
 ^README\.html
 ^NEWS\.md
 ^cran-comments\.md$
-^inst/examples/.*$
