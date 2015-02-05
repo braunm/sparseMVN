@@ -1,0 +1,4 @@
+%\VignetteIndexEntry{sparseMVN timing comparison}
+\documentclass{article}
+\begin{document}
+\end{document}
