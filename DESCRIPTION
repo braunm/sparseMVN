@@ -3,8 +3,8 @@ Type: Package
 Title: Multivariate Normal Functions for Sparse Covariance and Precision
     Matrices.
 Version: 0.2.0
-Date: 2015-02-04
-Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre"))
+Date: 2015-02-05
+Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre","cph"))
 Description: Computes multivariate normal (MVN) densities, and
     samples from MVN distributions, when the covariance or
     precision matrix is sparse.

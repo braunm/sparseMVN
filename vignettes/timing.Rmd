@@ -1,0 +1,14 @@
+---
+title: Index to sparseMVN timing comparison pdf
+author:  Michael Braun
+date:  "`r Sys.Date()`"
+output:  rmarkdown::html_vignette
+bibliography:  sparseMVN.bib
+header-includes:
+  \usepackage{amsmath}
+vignette: >
+  %\VignetteIndexEntry{sparseMVN timing comparison}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+

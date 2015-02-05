@@ -27,7 +27,7 @@
 #' if pivoting was turned off.
 #'
 #' @examples
-#' if (require(Matrix)) {
+#'    require(Matrix)
 #'    m <- 20
 #'    p <- 2
 #'    k <- 4
@@ -44,7 +44,6 @@
 #' 
 #'    y <- dmvn.sparse(x[1,],rep(0,p*m+k), CH, FALSE)
 #'  ##  print(y)
-#' }
 #'
 #' @export
 rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
