@@ -1,7 +1,7 @@
 Package: sparseMVN
 Type: Package
 Title: Multivariate Normal Functions for Sparse Covariance and Precision
-    Matrices.
+    Matrices
 Version: 0.2.0
 Date: 2015-02-05
 Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre","cph"))
