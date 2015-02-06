@@ -3,6 +3,9 @@
 NEWS FILE FOR SPARSEMVN PACKAGE
 
 
+VERSION 0.2.1 (development)
+
+
 VERSION 0.2.0 (Feb. 5, 2015)
 
 -   Major overhaul of package structure, with new vignettes. Demos were
