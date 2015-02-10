@@ -1,7 +1,7 @@
 #' @name sparseMVN-package
 #' @aliases sparseMVN-package sparseMVN
 #' @docType package
-#' @title Multivariate normal functions for sparse covariate and precision matrices.
+#' @title Multivariate Normal Functions for Sparse Covariate and Precision Matrices
 #'
 #' @details Computes multivariate normal (MVN) densities, and samples
 #' from MVN distributions, when either the covariance or precision
