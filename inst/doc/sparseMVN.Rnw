@@ -1,0 +1,441 @@
+
+\documentclass[codesnippet,nojss]{jss}
+
+  %\VignetteEngine{knitr::knitr}
+% \VignetteIndexEntry{Using sparseMVN_new}
+ %\VignetteKeyword{sparseMVN}
+ 
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{booktabs}
+\usepackage{etoolbox}
+\usepackage{placeins}
+ 
+\newcommand{\func}[1]{\code{#1}}
+\newcommand{\class}[1]{\textsl{#1}}
+\newcommand{\funcarg}[1]{\code{#1}}
+\newcommand{\variable}[1]{\code{#1}}
+\newcommand{\method}[1]{\func{#1}}
+\newcommand{\Cond}[2]{\left.#1\,\middle|\,#2\right.}
+\newcommand{\EV}[1]{\mathbf{E}\!\left(#1\right)}
+\newcommand{\Var}[1]{\mathbf{var}\!\left(#1\right)}
+\newcommand{\SD}[1]{\mathbf{SD}\!\left(#1\right)}
+\newcommand{\SE}[1]{\mathbf{SE}\!\left(#1\right)}
+\newcommand{\dist}[2]{#1\!\left(#2\right)}
+\newcommand{\Logit}[1]{\logit\!\left(#1\right)}
+\newcommand{\Cov}[1]{\mathbf{cov}\!\left(#1\right)}
+\newcommand{\Corr}[2]{\mathbf{corr}\!\left(#1,\,#2\right)}
+\newcommand{\Norm}[1]{\mathbf{N}\!\left(#1\right)}
+\newcommand{\MVN}[1]{\mathbf{MVN}\!\left(#1\right)}
+\newcommand{\Real}[1]{\mathbb{R}^{#1}}
+\newcommand{\bigO}[1]{\mathcal{O}\!\left(#1\right)}
+
+
+ 
+ 
+ \author{Michael Braun\\Edwin L. Cox School of Business\\Southern Methodist University}
+\Plainauthor{Michael Braun}
+\title{\pkg{sparseMVN}: An R Package for Multivariate Normal Functions
+  with Sparse Covariance and Precision Matrices}
+\Plaintitle{sparseMVN: An R Package for Sparse MVN Functions}
+\Shorttitle{sparseMVN}
+\Keywords{multivariate normal, sparse matrices}
+\Address{
+  Michael Braun\\
+  Edwin L. Cox School of Business\\
+  Southern Methodist University\\
+  6212 Bishop Blvd.\\
+  Dallas, TX 75275\\
+  E-mail:  \email{braunm@smu.edu}\\
+  URL:  \url{http://www.smu.edu/Cox/Departments/FacultyDirectory/BraunMichael}
+}
+
+
+\Abstract{
+The sparseMVN package exploits sparsity in covariance and precision
+matrices to speed up multivariate normal simpulation and density computation.
+}
+
+
+\date{December 22, 2016}
+
+%% need no \usepackage{Sweave.sty}
+ 
+\begin{document}
+
+<<echo=FALSE>>=
+knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
+options(digits=4)
+@
+
+Simulation from, and calculating the density of, a multivariate normal
+(MVN) distribution are common statistical tasks. Each task involves a
+set of linear algebra operations, such as multiplying a matrix with a
+vector or another matrix, decomposing a matrix into factors, and
+solving a system of linear equations. Without futher constraints on
+the covariance or precision matrix, the memory requirements and
+computational complexity of these component steps grows faster than
+the dimension of the MVN-distributed random variable. Because existing
+methods of working with the MVN distribution in \proglang{R} treat the
+covariance matrix as dense, these methods are not practical tools for
+working with high-dimensional problems.  However, in many cases the
+covariance or precision matrix is sparse.  The \pkg{sparseMVN} package
+supplies functions that exploit that sparsity.
+
+\section{The multivariate normal distribution}
+
+
+
+The \pkg{sparseMVN} package provides functions to sample from a
+multivariate normal (MVN) distribution, and compute its density, when the
+covariance or precision matrix is sparse.  By exploiting this
+sparsity, we can reduce the amount of computational resources that are
+needed for matrix storage, and for linear algebra routines like matrix-vector multiplication, solving linear systems, and
+computing Cholesky factors.  Sparse matrix structures store only the
+row and column indices, and the values, of the non-zero elements of
+the matrix. All other elements are assumed to be zero, so they do not
+need to be stored explicitly.  Many linear algebra libraries, such as
+those called by the \pkg{Matrix} package, include routines that are
+optimized for sparse matrices.  These routines are much faster than
+their dense matrix counterparts because they effectively skip over
+atomic operations that involve the zeros in the matrices.
+
+\section{Background}
+
+Let $x\in\Real{K}$ be a realization of random variable
+$X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{K}$ is a vector, and
+$\Sigma\in\Real{K\times K}$ is a positive-definite covariance matrix. 
+
+\subsection{Algorithms for MVN density and simulation}
+
+The probability
+density of $x$ is
+
+\begin{align}
+f(x)=(2\pi)^{-\frac{k}{2}}|\Sigma|^{-\frac{1}{2}}
+  \exp\left[-\frac{1}{2}\left(x-\mu\right)'\Sigma^{-1}\left(x-\mu\right)\right]
+\end{align}
+
+A typical approach to computing this density is
+\begin{enumerate}
+\item\label{it:dens1} compute a lower triagular matrix root $L$, such that  $\Sigma=LL^\top$;
+\item\label{it:dens2} solve for $z$ in the triangular linear system $Lz=\left(x-\mu\right)$;
+\item\label{it:dens3} compute $\log|\Sigma|=2\sum_{k=1}^KL_{kk}$; and
+\item\label{it:dens4} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
+\end{enumerate}
+
+For Step~\ref{it:dens1}, the matrix root $L$ could be generated via an eigenvalue, singular
+value, or Cholesky decomposition.  The Cholesky factor of a symmetric,
+positive definite matrix is the unique factor $L$ for which all of the
+diagonal elements are positive, so we will maintain usage of that
+definition. The computational complexity is $\bigO{k^3}$  for a Cholesky
+decomposition.  The complexity for solving the triangular linear
+system in Step~\ref{it:dens2} is $\bigO{k^2}$ \citep{GolubVanLoan1996}. Computation times for
+Steps~\ref{it:dens3} and \ref{it:dens4} are trivial. All together,
+computation time grows cubically with $k$. Additionally, the storage
+requirement for $\Sigma$ grows quadratically with $k$.
+
+Simulating a MVN random variable also requires a Cholesky
+decomposition and a triangular matrix multiplication:
+
+\begin{enumerate}
+\item \label{it:sim1} compute the Cholesky decomposition $L$, such
+  that $\Sigma=LL^\top$;
+\item \label{it:sim2} generate $z\in\Real{K}$ by simulating from a
+  standard normal distribution $k$ times;
+\item \label{it:sim3} compute $x=Lz+\mu$
+\end{enumerate}
+
+ We know that $x$ is a sample from $\MVN{\mu,\Sigma}$ because
+ \begin{align}
+ \EV{Lz}&=0,\text{ and}\\
+   \Cov{Lz}&=\EV{Lzz^\top L^\top}
+   =L\,\EV{zz^\top}L^\top=LL^\top=\Sigma
+ \end{align}
+
+The \func{dmvnorm} and \func{rmvnorm} functions in the \pkg{mvtnorm}
+package \citep{R_mvtnorm} generally follow these algorithms for density
+computation and random value simulation, respectively. They are
+well-established implementations, but are limited in some important ways.
+
+\begin{enumerate}
+\item Each call to the function involves a new matrix factorization
+  step.  This can be costly for applications in which $x$ or $\mu$
+  changes from call to call, but $\Sigma$ does not.
+\item In some applications, the precision matrix $\Sigma^{-1}$, and
+    not the covariance matrix $\Sigma$, is readily available (e.g.,
+    estimating the asymptotic covariance from the inverse of a Hessian
+    of a maximum likelihood estimator). To use the \pkg{mvtnorm}
+    functions, $\Sigma^{-1}$ would have to be inverted explicitly.
+  \item The \pkg{mvtnorm} functions will treat $\Sigma$ as if it were
+    dense, even if there is a large proportion of structural zeros.
+\end{enumerate}
+
+The \pkg{sparseMVN} package addresses these limitations.
+\begin{enumerate}
+\item The \func{rmvn.sparse} and \func{dmvn.sparse} functions take as
+  their matrix argument a sparse Cholesky decomposition. The user does
+  need to do this explicitly beforehand, but once it is done, it does
+  not have to be done again.
+\item Both functions include an argument to identify
+  the sparse Cholesky decomposition as a factor of a covariance matrix
+  (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
+\end{enumerate}
+
+Algorithms for computing the MVN density, and simulating MVN random variates, require
+only slight modifications when $\Sigma^{-1}$ is available instead of
+$\Sigma$. To compute the density:
+
+\begin{enumerate}
+\item\label{it:dens1p} compute a lower triagular matrix root $\Lambda$, such that  $\Sigma^{-1}=\Lambda\Lambda^\top$;
+\item\label{it:dens2p} compute $z = \Lambda^\top\left(x-\mu\right)$;
+\item\label{it:dens3p} compute $\log|\Sigma|=-2\sum_{k=1}^K \Lambda_{kk}$; and
+\item\label{it:dens4p} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
+\end{enumerate}
+
+For simulation,
+
+\begin{enumerate}
+\item \label{it:sim1p} compute the Cholesky decomposition $\Lambda$, such
+  that $\Sigma^{-1}=\Lambda\Lambda^\top$;
+\item \label{it:sim2p} generate $z\in\Real{K}$ by simulating from a
+  standard normal distribution $k$ times;
+\item \label{it:sim3p} solve for $x$ in the triangular linear system $\Lambda^\top\left(x-\mu\right)=z$
+\end{enumerate}
+
+Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
+advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
+example, if the user were starting with a large, dense precision
+matrix $\Sigma^{-1}$, and computing MVN densities repeatedly, it may
+take less time to compute the Cholesky decomposition of $\Sigma^{-1]}$ once, than to
+invert it and have the \pkg{mvtnorm} functions decompose $\Sigma$ over
+and over.  Nevertheless, the main purpose of \pkg{sparseMVN} is to
+exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
+
+\subsection{Sparsity}
+
+By "sparse matrix," we mean a matrix for which relatively few elements
+are non-zero. One situation in which sparse covariance/precision matrices occur is
+when sampling from a normal approximation to a posterior density of a
+hierarchical model.  For example, suppose we have $N$ heterogeneous
+units, each with a parameter vector of length $k$.  Also, suppose that
+there are $p$ population-level parameters (e.g., parameters on
+hyperpriors, homogeneous coefficients, etc).  If we assume that the
+$N$ parameter vectors are conditionally independent across units, then
+the cross-partial derivatives of elements of different vectors is
+zero.  
+
+
+<<echo=FALSE>>=
+require(sparseMVN)
+require(Matrix)
+require(mvtnorm)
+N <- 5
+k <- 2
+p <- 2
+nv1 <- N*k+p
+nels1 <- nv1^2
+nnz1 <- N*k^2 + 2*p*N*k + p^2
+nnz1LT <- N*k*(k+1)/2  + p*N*k + p*(p+1)/2
+Q <- 1000
+nv2 <- Q*k+p
+nels2 <- nv2^2
+nnz2 <- Q*k^2 + 2*p*Q*k + p^2
+nnz2LT <- Q*k*(k+1)/2 + p*Q*k + p*(p+1)/2
+options(scipen=999)
+@
+
+If $N=\Sexpr{N},~k= \Sexpr{k}$, and $p= \Sexpr{p}$, then there
+are \Sexpr{nv1} total variables, and the Hessian will have the following "block-arrow" pattern.
+
+<<echo=FALSE>>=
+M <- as(kronecker(diag(N),matrix(1,k,k)),"lMatrix")
+M <- rBind(M, Matrix(TRUE,p,N*k))
+M <- cBind(M, Matrix(TRUE, k*N+p, p))
+print(M)
+@
+
+
+There are \Sexpr{nels1} elements in this symmetric matrix, but only  \Sexpr{ nnz1} are
+non-zero, and only \Sexpr{nnz1LT} values are unique.  Although the reduction in
+RAM from using a sparse matrix structure for the Hessian may be
+modest, consider what would happen if $N=\Sexpr{Q}$ instead.  In that case,
+there are \Sexpr{nv2} variables in the problem, and more than $\Sexpr{floor(nels2/10^6)}$ million
+elements in the Hessian.  However, only $\Sexpr{nnz2}$ of those elements are
+non-zero.  If we work with only the lower triangle of the Hessian we
+only need to work with only \Sexpr{nnz2LT} unique values.
+
+Since a large proportion of elements in the matrix are zero, we need
+to store only the row and column indices, and the values, of the
+unique non-zero elements.  The efficiency gains in \pkg{sparseMVN} come from
+storing the covariance or precision matrix in a compressed format without
+explicit zeros, and applying linear algebra routines that are
+optimized for those sparse matrix structures.  The \pkg{Matrix}
+package calls sparse linear algebra routines that are implemented in
+the \pkg{CHOLMOD} library
+\citep{ChenDavis2008,DavisHager1999,DavisHager2009}; more information
+about these routines is available there.
+
+
+\subsection{Other}
+
+The exact amount of time and memory that are saved by saving the
+covariance/precision matrix in a sparse format depends on the sparsity
+pattern.  But for the hierarchical model example from earlier in this
+section, the number of non-zero elements grows only linearly with
+$N$.  The result is that all of the steps of sampling from an MVN also
+grow linearly with $N$.  Section 4 of \citet{BraunDamien2014} explains why this is so.
+
+
+\section{Using the sparseMVN package}
+
+The \pkg{sparseMVN} package provides \func{rmvn.sparse} and \func{dmvn.sparse} as alternatives to
+\func{rmvnorm} and \func{dmvnorm}.  The signatures are
+
+
+<<eval=FALSE>>=
+rmvn.sparse(ndraws, mu, CH, prec=TRUE)
+dmvn.sparse(x, mu, CH, prec=TRUE)
+@
+
+\func{mvn.sparse} returns a matrix $X$ with each sample in a row.  The
+mean vector $\mu$ has $q$ elements.  CH is either a \class{dCHMsimpl} or
+\class{dCHMsuper} object, and is computed using the func{Cholesky} function in
+the \pkg{Matrix} package.  The \funcarg{prec} argument identifies if CH is the
+decomposition of either the covariance ($\Sigma$, \funcarg{prec=FALSE}) or
+precision ($\Sigma^{-1}$, \funcarg{prec=TRUE}) matrix.  These functions do
+require the user to compute the Cholesky decomposition beforehand, but
+this needs to be done only once (as long as $\Sigma$ does not change).
+
+More details about the \func{Cholesky} function are available in the
+\pkg{Matrix} package, but it is a simple function to use.  The first
+argument is a sparse symmetric Matrix stored as a \class{dsCMatrix} object.
+As far as we know, there is no
+particular need to deviate from the defaults of the remaining
+arguments.  If \func{Cholesky} uses a fill-reducing permutation to compute
+\variable{CH}, the functions in \pkg{sparseMVN} will handle that directly, with no
+additional user intervention required.
+
+Do not use the \func{chol}
+function in base \proglang{R}.  \func{Cholesky} is designed for decomposing \emph{sparse}
+matrices, which involves permuting rows and columns to maintain
+sparsity of the factor.  The \class{dCHMsimple} and \class{dCHMsuper} objects
+store this permutation, which \func{rmvn.sparse} and \func{dmvn.sparse} need.
+
+\subsection{An example}
+
+Suppose we want to generate $R$ samples from $X$, where $X\sim
+\MVN{\mu,\Sigma}$, and the structure of $\Sigma$ is defined by our
+example model. In the following code, we first construct the mean vector $\mu$.
+Then, we construct a random "block arrow"
+covariance matrix for a given $N$, $p$, and $k$.  We use functions
+from the \pkg{Matrix} package to ensure that $\Sigma$ is stored as a
+sparse matrix in compressed format. 
+
+<<collapse=TRUE>>=
+require(Matrix)
+set.seed(123)
+N <- 5  ## number of blocks in sparse covariance matrix
+p <- 2 ## size of each block
+k <- 2  ##
+R <- 10
+    
+## mean vector
+mu <- seq(-3,3,length=k*N+p)
+
+## build random block-arrow covariance/precision matrix for test
+Q1 <- tril(kronecker(diag(N), Matrix(seq(0.1,1.1,length=k*k),k,k)))
+Q2 <- Matrix(rnorm(N*k*p), p, N*k)
+Q3 <- tril(0.2*diag(p))
+Sigma <- rBind(cBind(Q1, Matrix(0, N*k, p)), cBind(Q2, Q3))
+Sigma <- Matrix::tcrossprod(Sigma)
+class(Sigma)
+@
+
+
+Next, we compute the Cholesky decomposition of $\Sigma$ using the
+\func{Cholesky} function, and call \func{rmvn.sparse}, noting that \funcarg{chol.Sigma}
+is the decomposition of a \emph{covariance} matrix, and not a precision matrix.
+
+
+<<collapse=TRUE>>=
+chol.Sigma <- Matrix::Cholesky(Sigma)  ## creates a dCHMsimpl object
+x <- rmvn.sparse(R, mu, chol.Sigma, prec=FALSE)
+@
+Each row of \variable{x} is a sample, and each column is a variable.
+
+
+The \func{dmvn.sparse} function returns the log density for each row.
+Since we have already computed the Cholesky
+decomposition for $\Sigma$, we do not need to do it again.
+
+<<collapse=TRUE>>=
+d <- dmvn.sparse(x, mu, chol.Sigma, prec=FALSE)
+str(d)
+@
+
+Sometimes the precision matrix $\Sigma^{-1}$ is more readily available
+than $\Sigma$. For example, the negative Hessian of a log posterior
+density at the posterior mode is the precision of the normal
+approximation to that density.  Let $\Sigma^{-1}=\Lambda\Lambda'$ represent the Cholesky decomposition of $\Sigma^{-1}$.  To sample $x$, we sample $z$ as before, solve $\Lambda'x=z$, and then add $\mu$.  Since $\EV{z}=0$ and $\EV{zz'}=I_k$, we have $\EV{x}=\mu$, and $cov(xx')=\EV{\Lambda'^{-1}zz'\Lambda^{-1}}=\Lambda'^{-1}\Lambda^{-1}=(\Lambda\Lambda')^{-1}=\Sigma$.  Then, if we let $y=\Lambda'(x-\mu)$, the log density is 
+
+\begin{align}
+  \log f(x)=-\frac{k}{2}\log(2\pi)+|\Lambda|-\frac{1}{2}y'y
+\end{align}
+
+By setting the argument \funcarg{prec=TRUE}, \func{rmvn.sparse} and \func{dmvn.sparse} will
+recognize the Cholesky decomposition as being for a \emph{precision} matrix
+instead of a covariance matrix.  Without this option, the user would
+need to explicitly invert $\Sigma$ beforehand.  Even if $\Sigma^{-1}$
+were sparse, there is no guarantee that $\Sigma$ would be (and vice
+versa).  \func{rmvn.sparse} and \func{dmvn.sparse} let the user work with either
+the covariance or precision matrix, depending on which is more convenient.
+
+\section{Timing}
+A timing comparison is available as a separate vignette.
+
+
+\section{Other packages for creating and using sparse matrices}
+
+\subsection{sparseHessianFD}
+
+Suppose you have a objective function that has a sparse Hessian (e.g.,
+the log posterior density for a hierarchical model).  You have an
+\proglang{R} function that computes the value of the objective, and another
+function that computes its gradient.  You may also need the Hessian,
+either for a nonlinear optimization routine, or as the negative
+precision matrix of an MVN approximation.
+
+It's hard enough to get the gradient, but the derivation of the
+Hessian might be too tedious or complicated for it to be worthwhile.
+However, it should not be too hard to identify which elements of the
+Hessian are non-zero.  If you have both the gradient, and the Hessian
+emph{pattern}, then you can use the \pkg{sparseHessianFD} package
+\citep{R_sparseHessianFD} to estimate the Hessian itself.
+
+The \pkg{sparseHessianFD} package estimates the Hessian numerically, but in a
+way that exploits the fact that the Hessian is sparse, and that the
+pattern is known.  The package contains functions that return the
+Hessian as a sparse \class{dgCMatrix}.  This object can be coerced into a
+\class{dsCMatrix}, which in turn can be used by \func{rmvn.sparse} and
+\func{dmvn.sparse}.
+
+\subsection{trustOptim}
+
+The \pkg{trustOptim} package provides a nonlinear optimization routine
+that takes the Hessian as a sparse \class{dgCMatrix} object.  This optimizer
+is useful for unconstrained optimization of a high-dimensional
+objective function with a sparse Hessian.  It uses a trust region
+algorithm, which may be more stable and robust than line search
+approaches.  Also, it applies a stopping rule based on the norm of the
+gradient, as opposed to whether the algorithm makes "sufficient
+progress."  (Many optimizers, especially \func{optim} in \pkg{base} \proglang{R}, stop
+too early, before the gradient is truly flat).
+
+
+
+\FloatBarrier
+\bibliography{sparseMVN}
+
+\end{document}
