@@ -67,27 +67,24 @@ matrices to speed up multivariate normal simpulation and density computation.
 <<echo=FALSE>>=
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
 options(digits=4)
+suppressMessages(library(dplyr))
 @
 
 Simulation from, and calculating the density of, a multivariate normal
-(MVN) distribution are common statistical tasks. Each task involves a
-set of linear algebra operations, such as multiplying a matrix with a
+(MVN) distribution linear algebra operations, such as multiplying a matrix with a
 vector or another matrix, decomposing a matrix into factors, and
 solving a system of linear equations. Without futher constraints on
 the covariance or precision matrix, the memory requirements and
-computational complexity of these component steps grows faster than
+computational complexity of these component steps grow faster than
 the dimension of the MVN-distributed random variable. Because existing
 methods of working with the MVN distribution in \proglang{R} treat the
 covariance matrix as dense, these methods are not practical tools for
-working with high-dimensional problems.  However, in many cases the
+working with high-dimensional problems.
+
+However, in many cases the
 covariance or precision matrix is sparse.  The \pkg{sparseMVN} package
-supplies functions that exploit that sparsity.
-
-\section{The multivariate normal distribution}
-
-
-
-The \pkg{sparseMVN} package provides functions to sample from a
+supplies functions that exploit that sparsity.  The \pkg{sparseMVN}
+package provides functions to sample from a
 multivariate normal (MVN) distribution, and compute its density, when the
 covariance or precision matrix is sparse.  By exploiting this
 sparsity, we can reduce the amount of computational resources that are
@@ -101,16 +98,15 @@ optimized for sparse matrices.  These routines are much faster than
 their dense matrix counterparts because they effectively skip over
 atomic operations that involve the zeros in the matrices.
 
-\section{Background}
+
+\section{The multivariate normal distribution}
+
 
 Let $x\in\Real{K}$ be a realization of random variable
 $X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{K}$ is a vector, and
 $\Sigma\in\Real{K\times K}$ is a positive-definite covariance matrix. 
 
-\subsection{Algorithms for MVN density and simulation}
-
-The probability
-density of $x$ is
+The probability density of $x$ is
 
 \begin{align}
 f(x)=(2\pi)^{-\frac{k}{2}}|\Sigma|^{-\frac{1}{2}}
@@ -125,16 +121,11 @@ A typical approach to computing this density is
 \item\label{it:dens4} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
 \end{enumerate}
 
-For Step~\ref{it:dens1}, the matrix root $L$ could be generated via an eigenvalue, singular
+The matrix root $L$ could be generated via an eigenvalue, singular
 value, or Cholesky decomposition.  The Cholesky factor of a symmetric,
 positive definite matrix is the unique factor $L$ for which all of the
 diagonal elements are positive, so we will maintain usage of that
-definition. The computational complexity is $\bigO{k^3}$  for a Cholesky
-decomposition.  The complexity for solving the triangular linear
-system in Step~\ref{it:dens2} is $\bigO{k^2}$ \citep{GolubVanLoan1996}. Computation times for
-Steps~\ref{it:dens3} and \ref{it:dens4} are trivial. All together,
-computation time grows cubically with $k$. Additionally, the storage
-requirement for $\Sigma$ grows quadratically with $k$.
+definition. 
 
 Simulating a MVN random variable also requires a Cholesky
 decomposition and a triangular matrix multiplication:
@@ -154,6 +145,12 @@ decomposition and a triangular matrix multiplication:
    =L\,\EV{zz^\top}L^\top=LL^\top=\Sigma
  \end{align}
 
+The computational complexity is $\bigO{k^3}$  for a Cholesky
+decomposition, and $\bigO{k^2}$ for solving the triangular linear
+system \citep{GolubVanLoan1996}, so the total computational cost grows
+cubically with the dimension of the random variable.  Additionally, the storage
+requirement for $\Sigma$ grows quadratically with $k$.
+ 
 The \func{dmvnorm} and \func{rmvnorm} functions in the \pkg{mvtnorm}
 package \citep{R_mvtnorm} generally follow these algorithms for density
 computation and random value simulation, respectively. They are
@@ -167,8 +164,8 @@ well-established implementations, but are limited in some important ways.
     not the covariance matrix $\Sigma$, is readily available (e.g.,
     estimating the asymptotic covariance from the inverse of a Hessian
     of a maximum likelihood estimator). To use the \pkg{mvtnorm}
-    functions, $\Sigma^{-1}$ would have to be inverted explicitly.
-  \item The \pkg{mvtnorm} functions will treat $\Sigma$ as if it were
+    functions, $\Sigma^{-1}$ would first have to be inverted explicitly.
+  \item The \pkg{mvtnorm} functions treat $\Sigma$ as if it were
     dense, even if there is a large proportion of structural zeros.
 \end{enumerate}
 
@@ -188,7 +185,7 @@ only slight modifications when $\Sigma^{-1}$ is available instead of
 $\Sigma$. To compute the density:
 
 \begin{enumerate}
-\item\label{it:dens1p} compute a lower triagular matrix root $\Lambda$, such that  $\Sigma^{-1}=\Lambda\Lambda^\top$;
+\item\label{it:dens1p} compute the Cholesky decomposition of $\Sigma^{-1}$, $\Lambda$, such that  $\Sigma^{-1}=\Lambda\Lambda^\top$;
 \item\label{it:dens2p} compute $z = \Lambda^\top\left(x-\mu\right)$;
 \item\label{it:dens3p} compute $\log|\Sigma|=-2\sum_{k=1}^K \Lambda_{kk}$; and
 \item\label{it:dens4p} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
@@ -197,7 +194,7 @@ $\Sigma$. To compute the density:
 For simulation,
 
 \begin{enumerate}
-\item \label{it:sim1p} compute the Cholesky decomposition $\Lambda$, such
+\item \label{it:sim1p} compute the Cholesky decomposition of $\Sigma^{-1}$, $\Lambda$, such
   that $\Sigma^{-1}=\Lambda\Lambda^\top$;
 \item \label{it:sim2p} generate $z\in\Real{K}$ by simulating from a
   standard normal distribution $k$ times;
@@ -215,17 +212,17 @@ exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
 
 \subsection{Sparsity}
 
-By "sparse matrix," we mean a matrix for which relatively few elements
-are non-zero. One situation in which sparse covariance/precision matrices occur is
-when sampling from a normal approximation to a posterior density of a
-hierarchical model.  For example, suppose we have $N$ heterogeneous
-units, each with a parameter vector of length $k$.  Also, suppose that
-there are $p$ population-level parameters (e.g., parameters on
-hyperpriors, homogeneous coefficients, etc).  If we assume that the
-$N$ parameter vectors are conditionally independent across units, then
-the cross-partial derivatives of elements of different vectors is
-zero.  
-
+By ``sparse matrix,'' we mean a matrix for which relatively few elements
+are non-zero. For example, consider the Hessian of a log posterior
+density for a hierarchical model with outcomes that are conditionally
+independent across $N$ heterogeneous units.  Each unit is
+characterized by a vector $\beta_i\in\Real{k}$ for $i=1,\dotsc,N$, and depend
+on $p$ population-level variables.  In this model, there are $M=Nk+p$
+total variables.  The cross partial derivatives between any two
+elements of $\beta_i$, or between any $\beta_i$ and a population-level
+parameter, could be non-zero, but the cross-partial derivatives between an element in
+$\beta_i$ and an element in any other $\beta_j$ for $j\neq i$ must
+always be zero under the conditional independence assumption. 
 
 <<echo=FALSE>>=
 require(sparseMVN)
@@ -246,8 +243,10 @@ nnz2LT <- Q*k*(k+1)/2 + p*Q*k + p*(p+1)/2
 options(scipen=999)
 @
 
-If $N=\Sexpr{N},~k= \Sexpr{k}$, and $p= \Sexpr{p}$, then there
-are \Sexpr{nv1} total variables, and the Hessian will have the following "block-arrow" pattern.
+When $N$ is large, the proportion of non-zero elements in the Hessian is small,
+and thus the Hessian is sparse. For example, if $N=\Sexpr{N},~k= \Sexpr{k}$, and $p= \Sexpr{p}$, then there
+are \Sexpr{nv1} total variables, and the Hessian will have the
+following ``block-arrow'' pattern.
 
 <<echo=FALSE>>=
 M <- as(kronecker(diag(N),matrix(1,k,k)),"lMatrix")
@@ -256,36 +255,29 @@ M <- cBind(M, Matrix(TRUE, k*N+p, p))
 print(M)
 @
 
+<<echo=FALSE, results="hide">>=
+M2 <- as(kronecker(diag(Q),matrix(1,k,k)),"lMatrix") %>%
+    rBind(Matrix(TRUE,p,Q*k)) %>%
+    cBind(Matrix(TRUE, k*Q+p, p)) %>%
+    as("dgCMatrix") %>%
+    as("symmetricMatrix")
+A2 <- as(M2,"matrix")
+@ 
 
-There are \Sexpr{nels1} elements in this symmetric matrix, but only  \Sexpr{ nnz1} are
-non-zero, and only \Sexpr{nnz1LT} values are unique.  Although the reduction in
-RAM from using a sparse matrix structure for the Hessian may be
-modest, consider what would happen if $N=\Sexpr{Q}$ instead.  In that case,
+There are \Sexpr{nels1} elements in this symmetric matrix.  If the
+matrix is stored in the standard \pkg{base} \proglang{R} dense
+format, memory is reserved for all \Sexpr{nels1} values, even though only \Sexpr{nnz1} values are
+non-zero, and only \Sexpr{nnz1LT} values are unique. For larger
+matrices, the reduction in memory requirements by storing the matrix
+in a sparse format can be substantion.  If $N=\Sexpr{Q}$, 
 there are \Sexpr{nv2} variables in the problem, and more than $\Sexpr{floor(nels2/10^6)}$ million
 elements in the Hessian.  However, only $\Sexpr{nnz2}$ of those elements are
 non-zero.  If we work with only the lower triangle of the Hessian we
-only need to work with only \Sexpr{nnz2LT} unique values.
-
-Since a large proportion of elements in the matrix are zero, we need
-to store only the row and column indices, and the values, of the
-unique non-zero elements.  The efficiency gains in \pkg{sparseMVN} come from
-storing the covariance or precision matrix in a compressed format without
-explicit zeros, and applying linear algebra routines that are
-optimized for those sparse matrix structures.  The \pkg{Matrix}
-package calls sparse linear algebra routines that are implemented in
-the \pkg{CHOLMOD} library
-\citep{ChenDavis2008,DavisHager1999,DavisHager2009}; more information
-about these routines is available there.
+only need to work with only \Sexpr{nnz2LT} unique values.  The dense
+matrix requires \Sexpr{format(object.size(A2),units='Mb')} of RAM,
+while a sparse matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(M2),units='Kb')}.
 
 
-\subsection{Other}
-
-The exact amount of time and memory that are saved by saving the
-covariance/precision matrix in a sparse format depends on the sparsity
-pattern.  But for the hierarchical model example from earlier in this
-section, the number of non-zero elements grows only linearly with
-$N$.  The result is that all of the steps of sampling from an MVN also
-grow linearly with $N$.  Section 4 of \citet{BraunDamien2014} explains why this is so.
 
 
 \section{Using the sparseMVN package}
@@ -434,6 +426,28 @@ progress."  (Many optimizers, especially \func{optim} in \pkg{base} \proglang{R}
 too early, before the gradient is truly flat).
 
 
+\section{Other}
+
+Since a large proportion of elements in the matrix are zero, we need
+to store only the row and column indices, and the values, of the
+unique non-zero elements.  The efficiency gains in \pkg{sparseMVN} come from
+storing the covariance or precision matrix in a compressed format without
+explicit zeros, and applying linear algebra routines that are
+optimized for those sparse matrix structures.  The \pkg{Matrix}
+package calls sparse linear algebra routines that are implemented in
+the \pkg{CHOLMOD} library
+\citep{ChenDavis2008,DavisHager1999,DavisHager2009}; more information
+about these routines is available there.
+
+
+
+
+The exact amount of time and memory that are saved by saving the
+covariance/precision matrix in a sparse format depends on the sparsity
+pattern.  But for the hierarchical model example from earlier in this
+section, the number of non-zero elements grows only linearly with
+$N$.  The result is that all of the steps of sampling from an MVN also
+grow linearly with $N$.  Section 4 of \citet{BraunDamien2014} explains why this is so.
 
 \FloatBarrier
 \bibliography{sparseMVN}

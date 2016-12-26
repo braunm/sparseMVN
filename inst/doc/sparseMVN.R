@@ -1,6 +1,7 @@
 ## ----echo=FALSE----------------------------------------------------------
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
 options(digits=4)
+suppressMessages(library(dplyr))
 
 ## ----echo=FALSE----------------------------------------------------------
 require(sparseMVN)
@@ -25,6 +26,14 @@ M <- as(kronecker(diag(N),matrix(1,k,k)),"lMatrix")
 M <- rBind(M, Matrix(TRUE,p,N*k))
 M <- cBind(M, Matrix(TRUE, k*N+p, p))
 print(M)
+
+## ----echo=FALSE, results="hide"------------------------------------------
+M2 <- as(kronecker(diag(Q),matrix(1,k,k)),"lMatrix") %>%
+    rBind(Matrix(TRUE,p,Q*k)) %>%
+    cBind(Matrix(TRUE, k*Q+p, p)) %>%
+    as("dgCMatrix") %>%
+    as("symmetricMatrix")
+A2 <- as(M2,"matrix")
 
 ## ----eval=FALSE----------------------------------------------------------
 #  rmvn.sparse(ndraws, mu, CH, prec=TRUE)
