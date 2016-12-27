@@ -2,6 +2,7 @@
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
 options(digits=4)
 suppressMessages(library(dplyr))
+suppressMessages(library(scales))
 
 ## ----echo=FALSE----------------------------------------------------------
 require(sparseMVN)

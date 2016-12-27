@@ -3,7 +3,7 @@ Type: Package
 Title: Multivariate Normal Functions for Sparse Covariance and Precision
     Matrices
 Version: 0.2.0.9990
-Date: 2016-12-25
+Date: 2016-12-26
 Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre","cph"))
 Description: Computes multivariate normal (MVN) densities, and
     samples from MVN distributions, when the covariance or
@@ -18,7 +18,9 @@ Suggests:
     mvtnorm,
     plyr,
     knitr,
-    testthat
+    testthat,
+    dplyr,
+    scales
 Roxygen: list(wrap=TRUE)
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1

@@ -58,7 +58,7 @@ matrices to speed up multivariate normal simpulation and density computation.
 }
 
 
-\date{December 22, 2016}
+\date{December 26, 2016}
 
 %% need no \usepackage{Sweave.sty}
  
@@ -68,6 +68,7 @@ matrices to speed up multivariate normal simpulation and density computation.
 knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
 options(digits=4)
 suppressMessages(library(dplyr))
+suppressMessages(library(scales))
 @
 
 Simulation from, and calculating the density of, a multivariate normal
@@ -82,18 +83,17 @@ covariance matrix as dense, these methods are not practical tools for
 working with high-dimensional problems.
 
 However, in many cases the
-covariance or precision matrix is sparse.  The \pkg{sparseMVN} package
-supplies functions that exploit that sparsity.  The \pkg{sparseMVN}
-package provides functions to sample from a
-multivariate normal (MVN) distribution, and compute its density, when the
-covariance or precision matrix is sparse.  By exploiting this
-sparsity, we can reduce the amount of computational resources that are
-needed for matrix storage, and for linear algebra routines like matrix-vector multiplication, solving linear systems, and
-computing Cholesky factors.  Sparse matrix structures store only the
-row and column indices, and the values, of the non-zero elements of
-the matrix. All other elements are assumed to be zero, so they do not
-need to be stored explicitly.  Many linear algebra libraries, such as
-those called by the \pkg{Matrix} package, include routines that are
+covariance or precision matrix is sparse, meaning that the proportion
+of non-zero elements is small, relative to the total size of the
+matrix. The \pkg{sparseMVN} package exploits that sparsity when
+computing the MVN density, and sampling MVN random variates.
+Matrices stored in a compressed sparse format consume less memory than
+dense matrices of the same dimension (the zeros are not stored
+explicitly), and operations like
+matrix-vector multiplication, solving linear systems, and
+computing Cholesky factors, can be performed more efficiently. Many
+linear algebra libraries, such as those called by the \pkg{Matrix}
+package, include routines that are
 optimized for sparse matrices.  These routines are much faster than
 their dense matrix counterparts because they effectively skip over
 atomic operations that involve the zeros in the matrices.
@@ -102,58 +102,115 @@ atomic operations that involve the zeros in the matrices.
 \section{The multivariate normal distribution}
 
 
-Let $x\in\Real{K}$ be a realization of random variable
-$X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{K}$ is a vector, and
-$\Sigma\in\Real{K\times K}$ is a positive-definite covariance matrix. 
+Let $x\in\Real{k}$ be a realization of random variable
+$X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{k}$ is a vector,
+$\Sigma\in\Real{k\times k}$ is a positive-definite covariance matrix,
+and $\Sigma^{-1}\in\Real{k\times k}$ is a positive-definite precision matrix. 
 
-The probability density of $x$ is
+The log probability density of $x$ is
 
 \begin{align}
-f(x)=(2\pi)^{-\frac{k}{2}}|\Sigma|^{-\frac{1}{2}}
-  \exp\left[-\frac{1}{2}\left(x-\mu\right)'\Sigma^{-1}\left(x-\mu\right)\right]
-\end{align}
-
-A typical approach to computing this density is
-\begin{enumerate}
-\item\label{it:dens1} compute a lower triagular matrix root $L$, such that  $\Sigma=LL^\top$;
-\item\label{it:dens2} solve for $z$ in the triangular linear system $Lz=\left(x-\mu\right)$;
-\item\label{it:dens3} compute $\log|\Sigma|=2\sum_{k=1}^KL_{kk}$; and
-\item\label{it:dens4} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
-\end{enumerate}
-
-The matrix root $L$ could be generated via an eigenvalue, singular
-value, or Cholesky decomposition.  The Cholesky factor of a symmetric,
-positive definite matrix is the unique factor $L$ for which all of the
-diagonal elements are positive, so we will maintain usage of that
-definition. 
-
-Simulating a MVN random variable also requires a Cholesky
-decomposition and a triangular matrix multiplication:
-
-\begin{enumerate}
-\item \label{it:sim1} compute the Cholesky decomposition $L$, such
-  that $\Sigma=LL^\top$;
-\item \label{it:sim2} generate $z\in\Real{K}$ by simulating from a
-  standard normal distribution $k$ times;
-\item \label{it:sim3} compute $x=Lz+\mu$
-\end{enumerate}
-
- We know that $x$ is a sample from $\MVN{\mu,\Sigma}$ because
- \begin{align}
- \EV{Lz}&=0,\text{ and}\\
-   \Cov{Lz}&=\EV{Lzz^\top L^\top}
-   =L\,\EV{zz^\top}L^\top=LL^\top=\Sigma
+\log f(x)&=-\frac{k}{2} \log (2\pi) - \frac{1}{2}\log|\Sigma|
+  -\frac{1}{2}z^\top z,\quad\text{where}~z^\top z=\left(x-\mu\right)^\top\Sigma^{-1}\left(x-\mu\right)
  \end{align}
 
-The computational complexity is $\bigO{k^3}$  for a Cholesky
-decomposition, and $\bigO{k^2}$ for solving the triangular linear
-system \citep{GolubVanLoan1996}, so the total computational cost grows
-cubically with the dimension of the random variable.  Additionally, the storage
+\subsection{Standard algorithms}
+
+The two computationally intensive steps in evaluating $\log f(x)$ are
+computing $\log|\Sigma|$, and $z^\top z$, \emph{without} explicitly
+inverting $\Sigma$ or repeating mathematical operations.  How one
+performs these steps \emph{efficiently} in practice depends on whether the
+covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is
+available. In both cases, we start by finding a lower triangular matrix root:
+$\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$.  Since $\Sigma$
+and $\Sigma^{-1}$ are positive definite, we will use the Cholesky
+decomposition, which is the unique matrix root with all positive
+elements on the diagonal.
+
+With the Cholesky decomposition in hand, we can compute the log
+determinant of $\Sigma$ by adding the logs of the diagonal elements of
+the factors.
+\begin{align}
+  \label{eq:logDet}
+  \log|\Sigma|= \begin{cases}
+    \phantom{-}2\sum_{k=1}^K\log L_{kk}&\text{ when $\Sigma$ is given}\\
+    -2\sum_{k=1}^K\log \Lambda_{kk}&\text{ when $\Sigma^{-1}$ is given}
+    \end{cases}
+\end{align}
+
+Having already computed the triangular matrix roots also speeds up the computation of
+$z^\top z$.  If $\Sigma^{-1}$ is given, $z=\Lambda^\top(x-\mu)$ can be computed
+efficiently as the product of an upper triangular matrix and a
+vector. When $\Sigma$ is given, we find $z$ by solving the lower
+triangular system $Lz=x-\mu$.  The subsequent $z^\top z$
+computation is trivially fast. 
+
+
+The algorithm for simulating from an $\MVN{\mu,\Sigma}$ distribution
+depends on whether
+$\Sigma$ or $\Sigma^{-1}$ is given.  As above, we start by computing
+the Cholesky decomposition of the given matrix. Then, let
+$z\sim\MVN{0,I_k}$ be a vector of $k$ samples from a standard normal distribution. If $\Sigma$ is given,
+then $x=Lz+\mu$.  If $\Sigma^{-1}$ is given, then solve for $x$ in the
+triangular linear system $\Lambda^\top\left(x-\mu\right)=z$.  Because
+$\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_k$, $x$ is a sample from $\MVN{\mu,\Sigma}$.
+ \begin{align}
+ \EV{x}&=\EV{Lz+\mu}=\EV{\Lambda^\top z+\mu}=\mu\\
+   \Cov{x}&= \Cov{Lz+\mu}=\EV{Lzz^\top L^\top}=LL^\top=\Sigma\\
+     \Cov{x}&=\Cov{\Lambda^{\top^{-1}}z+\mu}=\EV{\Lambda^{\top^{-1}}zz^\top\Lambda^{-1}}
+     =\Lambda^{\top^{-1}}\Lambda^{-1}=(\Lambda\Lambda^\top)^{-1}=\Sigma
+ \end{align}
+
+ These algorithms apply when the covariance/precision matrix is either
+sparse or dense.  When the matrix is dense, the computational
+complexity is $\bigO{k^3}$  for a Cholesky decomposition, and
+$\bigO{k^2}$ for either solving the triangular linear
+system or multiplying a triangular matrix by another matrix
+\citep{GolubVanLoan1996}.  Thus, the computational cost grows
+cubically with $k$ before the decomposition step, and quadratically if
+the decomposition has already been completed.  Additionally, the storage
 requirement for $\Sigma$ grows quadratically with $k$.
  
-The \func{dmvnorm} and \func{rmvnorm} functions in the \pkg{mvtnorm}
-package \citep{R_mvtnorm} generally follow these algorithms for density
-computation and random value simulation, respectively. They are
+ 
+ \subsection{Implementations in R}
+ 
+We have been able to find three \proglang{R} packages implement these general algorithms,
+perhaps with some modification.  The most popular is likely
+\pkg{mvtnorm} \citep{R_mvtnorm}, which is purpose-built to provide MVN and
+multivariate-t functions. \pkg{LaplacesDemon}
+\citep{R_LaplacesDemon} is a more general Bayesian estimation package
+that includes MVN functions that not only accept dense covariance
+matrices as arguments, but also precision matrices and Cholesky
+decompositions. The \pkg{MASS} package \citep{R_MASS}
+includes a function for simulating from an MVN distribution, but not
+for computing its density.
+
+\begin{table}
+\begin{tabular}{llcccccc}
+  \toprule
+  Package&Citation&dens&rand&sparse&prec&Chol&prob\\
+  \midrule
+  \pkg{mvtnorm}&\citep{R_mvtnorm}&x&x& & & &x\\
+  \pkg{LaplacesDemon}&\citep{R_LaplacesDemon}&x&x& &x&x\\
+  \pkg{MASS}&\citep{R_MASS}& &x& & & &\\
+  \pkg{sparseMVN}&this package&x&x&x&x&x&\\
+  \bottomrule
+\end{tabular}
+\caption{Comparison of capabilities of \proglang{R} packages that
+  implement MVN functions. dens: computes density. rand: generates
+  random simulates. sparse: accepts matrices in
+  sparse format.  prec: option to provide precision matrix. Chol:
+  option to provide a precomputed Cholesky decomposition. Prob:
+  computes cumulative probabilities.}\label{tab:MVNpackages}
+\end{table}
+
+ 
+
+ 
+ 
+
+ 
+They are
 well-established implementations, but are limited in some important ways.
 
 \begin{enumerate}
@@ -180,27 +237,6 @@ The \pkg{sparseMVN} package addresses these limitations.
   (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
 \end{enumerate}
 
-Algorithms for computing the MVN density, and simulating MVN random variates, require
-only slight modifications when $\Sigma^{-1}$ is available instead of
-$\Sigma$. To compute the density:
-
-\begin{enumerate}
-\item\label{it:dens1p} compute the Cholesky decomposition of $\Sigma^{-1}$, $\Lambda$, such that  $\Sigma^{-1}=\Lambda\Lambda^\top$;
-\item\label{it:dens2p} compute $z = \Lambda^\top\left(x-\mu\right)$;
-\item\label{it:dens3p} compute $\log|\Sigma|=-2\sum_{k=1}^K \Lambda_{kk}$; and
-\item\label{it:dens4p} compute $\log f(x)=-\frac{k}{2}\log(2\pi)-\frac{1}{2}\log|\Sigma|-\frac{1}{2}z'z$
-\end{enumerate}
-
-For simulation,
-
-\begin{enumerate}
-\item \label{it:sim1p} compute the Cholesky decomposition of $\Sigma^{-1}$, $\Lambda$, such
-  that $\Sigma^{-1}=\Lambda\Lambda^\top$;
-\item \label{it:sim2p} generate $z\in\Real{K}$ by simulating from a
-  standard normal distribution $k$ times;
-\item \label{it:sim3p} solve for $x$ in the triangular linear system $\Lambda^\top\left(x-\mu\right)=z$
-\end{enumerate}
-
 Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
 advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
 example, if the user were starting with a large, dense precision
@@ -210,7 +246,7 @@ invert it and have the \pkg{mvtnorm} functions decompose $\Sigma$ over
 and over.  Nevertheless, the main purpose of \pkg{sparseMVN} is to
 exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
 
-\subsection{Sparsity}
+\section{Sparsity}
 
 By ``sparse matrix,'' we mean a matrix for which relatively few elements
 are non-zero. For example, consider the Hessian of a log posterior
@@ -269,13 +305,16 @@ matrix is stored in the standard \pkg{base} \proglang{R} dense
 format, memory is reserved for all \Sexpr{nels1} values, even though only \Sexpr{nnz1} values are
 non-zero, and only \Sexpr{nnz1LT} values are unique. For larger
 matrices, the reduction in memory requirements by storing the matrix
-in a sparse format can be substantion.  If $N=\Sexpr{Q}$, 
-there are \Sexpr{nv2} variables in the problem, and more than $\Sexpr{floor(nels2/10^6)}$ million
-elements in the Hessian.  However, only $\Sexpr{nnz2}$ of those elements are
+in a sparse format can be substantial.\footnote{Because sparse matrix
+  structures store row and column indices of the non-zero values, they
+  may use more memory than dense storage if the total number of
+  elements is small}. If $N=\Sexpr{Q}$, 
+there are \Sexpr{comma(nv2)} variables in the problem, and more than $\Sexpr{floor(nels2/10^6)}$ million
+elements in the Hessian.  However, only $\Sexpr{comma(nnz2)}$ of those elements are
 non-zero.  If we work with only the lower triangle of the Hessian we
-only need to work with only \Sexpr{nnz2LT} unique values.  The dense
+only need to work with only \Sexpr{comma(nnz2LT)} unique values.  The dense
 matrix requires \Sexpr{format(object.size(A2),units='Mb')} of RAM,
-while a sparse matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(M2),units='Kb')}.
+while a sparse symmetric matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(M2),units='Kb')}.
 
 
 
