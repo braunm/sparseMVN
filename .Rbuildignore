@@ -15,3 +15,14 @@ data-raw/*
 ^NEWS\.md
 ^cran-comments\.md$
 ^nobuild/*
+vignettes/.*\.bbl$
+vignettes/.*\.blg$
+vignettes/prv\_.*
+vignettes/missfont.log
+vignettes/.*\.aux
+vignettes/cache
+\_region\_.*
+^revdep/*
+^cache/*
+
+

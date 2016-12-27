@@ -237,21 +237,6 @@ The \pkg{sparseMVN} package addresses these limitations.
   (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
 \end{enumerate}
 
-Algorithms for computing the MVN density, and simulating MVN random variates, require
-only slight modifications when $\Sigma^{-1}$ is available instead of
-$\Sigma$. To compute the density:
-
-
-For simulation,
-
-\begin{enumerate}
-\item \label{it:sim1p} compute the Cholesky decomposition of $\Sigma^{-1}$, $\Lambda$, such
-  that $\Sigma^{-1}=\Lambda\Lambda^\top$;
-\item \label{it:sim2p} generate $z\in\Real{K}$ by simulating from a
-  standard normal distribution $k$ times;
-\item \label{it:sim3p} solve for $x$ in the triangular linear system 
-\end{enumerate}
-
 Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
 advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
 example, if the user were starting with a large, dense precision
