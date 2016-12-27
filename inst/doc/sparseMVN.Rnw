@@ -99,7 +99,7 @@ their dense matrix counterparts because they effectively skip over
 atomic operations that involve the zeros in the matrices.
 
 
-\section{The multivariate normal distribution}
+\section{Background}
 
 
 Let $x\in\Real{k}$ be a realization of random variable
@@ -114,7 +114,7 @@ The log probability density of $x$ is
   -\frac{1}{2}z^\top z,\quad\text{where}~z^\top z=\left(x-\mu\right)^\top\Sigma^{-1}\left(x-\mu\right)
  \end{align}
 
-\subsection{Standard algorithms}
+\subsection{MVN density computation and random number generation}
 
 The two computationally intensive steps in evaluating $\log f(x)$ are
 computing $\log|\Sigma|$, and $z^\top z$, \emph{without} explicitly
@@ -161,7 +161,8 @@ $\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_k$, $x$ is a sample from $\MVN{\mu,\Sigma
      =\Lambda^{\top^{-1}}\Lambda^{-1}=(\Lambda\Lambda^\top)^{-1}=\Sigma
  \end{align}
 
- These algorithms apply when the covariance/precision matrix is either
+ 
+These algorithms apply when the covariance/precision matrix is either
 sparse or dense.  When the matrix is dense, the computational
 complexity is $\bigO{k^3}$  for a Cholesky decomposition, and
 $\bigO{k^2}$ for either solving the triangular linear
@@ -171,19 +172,30 @@ cubically with $k$ before the decomposition step, and quadratically if
 the decomposition has already been completed.  Additionally, the storage
 requirement for $\Sigma$ grows quadratically with $k$.
  
+Most, if not all, computer implementations of MVN functions follow
+this approach, at least in part.  We have found three \proglang{R} packages that
+provide MVN functions in some form; their features are summarized in
+Table~\ref{tab:MVNpackages}. The \pkg{mvtnorm} \cite{R_mvtnorm} is
+likely the most popular, and it is the only one of the three that is
+``purpose built'' for multivariate distributions. Its functionality is
+broader than \pkg{sparseMVN}, in that it computes
+cumulative probabilities and quantiles in additon to densities and
+random simulates, and supports the mulivariate t distribution as well
+as the MVN.  Its MVN implementation is reasonably mature, so we will
+use \pkg{mvtnorm} as the baseline against which
+we will compare \pkg{sparseMVN} later in this paper. 
+\pkg{LaplacesDemon} \cite{R_LaplacesDemon}  is a more general Bayesian
+estimation package that includes MVN functions.  Unlike \pkg{mvtnorm},
+but like \pkg{sparseMVN}, it has options for the user to provide a
+precision matrix instead of a covariance, and to provide a Cholesky
+decomposition instead of the
+full matrix. The \pkg{MASS} package \citep{R_MASS} includes a simple
+function for MVN random number generation, but not a function to
+compute the MVN density.  However, none of these package support
+covariance or precision matrices that are stored in a sparse
+compressed format, which we will describe next.
  
- \subsection{Implementations in R}
- 
-We have been able to find three \proglang{R} packages implement these general algorithms,
-perhaps with some modification.  The most popular is likely
-\pkg{mvtnorm} \citep{R_mvtnorm}, which is purpose-built to provide MVN and
-multivariate-t functions. \pkg{LaplacesDemon}
-\citep{R_LaplacesDemon} is a more general Bayesian estimation package
-that includes MVN functions that not only accept dense covariance
-matrices as arguments, but also precision matrices and Cholesky
-decompositions. The \pkg{MASS} package \citep{R_MASS}
-includes a function for simulating from an MVN distribution, but not
-for computing its density.
+
 
 \begin{table}
 \begin{tabular}{llcccccc}
@@ -210,41 +222,7 @@ for computing its density.
  
 
  
-They are
-well-established implementations, but are limited in some important ways.
 
-\begin{enumerate}
-\item Each call to the function involves a new matrix factorization
-  step.  This can be costly for applications in which $x$ or $\mu$
-  changes from call to call, but $\Sigma$ does not.
-\item In some applications, the precision matrix $\Sigma^{-1}$, and
-    not the covariance matrix $\Sigma$, is readily available (e.g.,
-    estimating the asymptotic covariance from the inverse of a Hessian
-    of a maximum likelihood estimator). To use the \pkg{mvtnorm}
-    functions, $\Sigma^{-1}$ would first have to be inverted explicitly.
-  \item The \pkg{mvtnorm} functions treat $\Sigma$ as if it were
-    dense, even if there is a large proportion of structural zeros.
-\end{enumerate}
-
-The \pkg{sparseMVN} package addresses these limitations.
-\begin{enumerate}
-\item The \func{rmvn.sparse} and \func{dmvn.sparse} functions take as
-  their matrix argument a sparse Cholesky decomposition. The user does
-  need to do this explicitly beforehand, but once it is done, it does
-  not have to be done again.
-\item Both functions include an argument to identify
-  the sparse Cholesky decomposition as a factor of a covariance matrix
-  (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
-\end{enumerate}
-
-Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
-advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
-example, if the user were starting with a large, dense precision
-matrix $\Sigma^{-1}$, and computing MVN densities repeatedly, it may
-take less time to compute the Cholesky decomposition of $\Sigma^{-1]}$ once, than to
-invert it and have the \pkg{mvtnorm} functions decompose $\Sigma$ over
-and over.  Nevertheless, the main purpose of \pkg{sparseMVN} is to
-exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
 
 \section{Sparsity}
 
@@ -316,6 +294,44 @@ only need to work with only \Sexpr{comma(nnz2LT)} unique values.  The dense
 matrix requires \Sexpr{format(object.size(A2),units='Mb')} of RAM,
 while a sparse symmetric matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(M2),units='Kb')}.
 
+
+
+
+They are
+well-established implementations, but are limited in some important ways.
+
+\begin{enumerate}
+\item Each call to the function involves a new matrix factorization
+  step.  This can be costly for applications in which $x$ or $\mu$
+  changes from call to call, but $\Sigma$ does not.
+\item In some applications, the precision matrix $\Sigma^{-1}$, and
+    not the covariance matrix $\Sigma$, is readily available (e.g.,
+    estimating the asymptotic covariance from the inverse of a Hessian
+    of a maximum likelihood estimator). To use the \pkg{mvtnorm}
+    functions, $\Sigma^{-1}$ would first have to be inverted explicitly.
+  \item The \pkg{mvtnorm} functions treat $\Sigma$ as if it were
+    dense, even if there is a large proportion of structural zeros.
+\end{enumerate}
+
+The \pkg{sparseMVN} package addresses these limitations.
+\begin{enumerate}
+\item The \func{rmvn.sparse} and \func{dmvn.sparse} functions take as
+  their matrix argument a sparse Cholesky decomposition. The user does
+  need to do this explicitly beforehand, but once it is done, it does
+  not have to be done again.
+\item Both functions include an argument to identify
+  the sparse Cholesky decomposition as a factor of a covariance matrix
+  (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
+\end{enumerate}
+
+Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
+advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
+example, if the user were starting with a large, dense precision
+matrix $\Sigma^{-1}$, and computing MVN densities repeatedly, it may
+take less time to compute the Cholesky decomposition of $\Sigma^{-1]}$ once, than to
+invert it and have the \pkg{mvtnorm} functions decompose $\Sigma$ over
+and over.  Nevertheless, the main purpose of \pkg{sparseMVN} is to
+exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
 
 
 
