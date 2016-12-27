@@ -10,3 +10,15 @@ vignettes/_region_.*
 vignettes/prv_*.log
 README.R
 README.html
+*.aux
+*.bcf
+*.bbl
+*.blg
+*.log
+*.out
+*.rel
+*.run.xml
+*.synctex.gz
+_region_*
+cache
+inst/doc/*
