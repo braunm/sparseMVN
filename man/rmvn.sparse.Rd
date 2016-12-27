@@ -7,36 +7,41 @@
 \usage{
 rmvn.sparse(n, mu, CH, prec = TRUE)
 
-dmvn.sparse(x, mu, CH, prec = TRUE)
+dmvn.sparse(x, mu, CH, prec = TRUE, log = TRUE)
 }
 \arguments{
-  \item{n}{number of samples} \item{mu}{mean (numeric
-  vector)} \item{CH}{An object of class dCHMsimpl or dCHMsuper
-  that represents the Cholesky factorization of either the
-  precision (default) or covariance matrix. See details.}
-  \item{prec}{If TRUE, CH is the Cholesky decomposition of the
-  precision matrix. If false, it is the decomposition for the
-  covariance matrix.} \item{x}{numeric matrix, where each row
-  is an MVN sample.}
+\item{n}{number of samples}
+
+\item{mu}{mean (numeric vector)}
+
+\item{CH}{An object of class dCHMsimpl or dCHMsuper that represents
+the Cholesky factorization of either the precision (default) or covariance
+matrix.  See details.}
+
+\item{prec}{If TRUE, CH is the Cholesky decomposition of the precision
+matrix.  If false, it is the decomposition for the covariance matrix.}
+
+\item{x}{numeric matrix, where each row is an MVN sample.}
+
+\item{log}{If TRUE (default), returns the log density, else returns density.}
 }
 \description{
-Efficient sampling and density calculation from a
-multivariate normal, when the covariance or precision matrix
-is sparse. These functions are designed for MVN samples of
-very large dimension.
+Efficient sampling and density calculation from a multivariate
+normal,
+when the covariance or precision matrix is sparse. These functions are
+designed for MVN samples of very large dimension.
 }
 \section{Details}{
-  These functions uses sparse matrix operations to sample
-  from, or compute the log density of, a multivariate
-  normal distribution The user must compute the Cholesky
-  decomposition first, using the Cholesky function in the
-  Matrix package. This function operates on a sparse symmetric
-  matrix, and returns an object of class dCHMsimpl or
-  dCHMsuper (this depends on the algorithm that was used for
-  the decomposition). This object contains information about
-  any fill-reducing permutations that were used to preserve
-  sparsity. The rmvn.sparse and dmvn.sparse functions use this
-  permutation information, even if pivoting was turned off.
+
+These functions uses sparse matrix operations to sample from, or compute the
+log density of, a multivariate normal distribution  The user must compute
+the Cholesky decomposition first, using the Cholesky function in the Matrix
+package.  This function operates on a sparse symmetric matrix, and returns
+an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm
+that was used for the decomposition).  This object contains information about
+any fill-reducing permutations that were used to preserve sparsity.  The
+rmvn.sparse and dmvn.sparse functions use this permutation information, even
+if pivoting was turned off.
 }
 \examples{
    require(Matrix)

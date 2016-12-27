@@ -21,7 +21,7 @@ vignettes/prv\_.*
 vignettes/missfont.log
 vignettes/.*\.aux
 vignettes/cache
-\_region\_.*
+vignettes/\_region\_.*
 ^revdep/*
 ^cache/*
 

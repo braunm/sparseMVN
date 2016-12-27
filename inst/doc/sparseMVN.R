@@ -10,7 +10,7 @@ require(Matrix)
 require(mvtnorm)
 N <- 5
 k <- 2
-p <- 2
+p <- k ## dimension of mu
 nv1 <- N*k+p
 nels1 <- nv1^2
 nnz1 <- N*k^2 + 2*p*N*k + p^2
@@ -22,48 +22,53 @@ nnz2 <- Q*k^2 + 2*p*Q*k + p^2
 nnz2LT <- Q*k*(k+1)/2 + p*Q*k + p*(p+1)/2
 options(scipen=999)
 
-## ----echo=FALSE----------------------------------------------------------
-M <- as(kronecker(diag(N),matrix(1,k,k)),"lMatrix")
-M <- rBind(M, Matrix(TRUE,p,N*k))
-M <- cBind(M, Matrix(TRUE, k*N+p, p))
-print(M)
+## ----blockarrow, echo=FALSE----------------------------------------------
+Mat <- as(kronecker(diag(N), matrix(1, k, k)),"sparseMatrix")
+Mat <- rBind(Mat, Matrix(1, p, N*k))
+Mat <- cBind(Mat, Matrix(1, k*N+p, p))
+printSpMatrix(as(Mat,"nMatrix"))
 
 ## ----echo=FALSE, results="hide"------------------------------------------
-M2 <- as(kronecker(diag(Q),matrix(1,k,k)),"lMatrix") %>%
+Mat2 <- as(kronecker(diag(Q),matrix(1,k,k)),"lMatrix") %>%
     rBind(Matrix(TRUE,p,Q*k)) %>%
     cBind(Matrix(TRUE, k*Q+p, p)) %>%
     as("dgCMatrix") %>%
     as("symmetricMatrix")
-A2 <- as(M2,"matrix")
+A2 <- as(Mat2,"matrix")
 
 ## ----eval=FALSE----------------------------------------------------------
-#  rmvn.sparse(ndraws, mu, CH, prec=TRUE)
-#  dmvn.sparse(x, mu, CH, prec=TRUE)
+#  rmvn.sparse(ndraws, mu, CH, prec=TRUE, log=TRUE)
+#  dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
 
-## ----collapse=TRUE-------------------------------------------------------
-require(Matrix)
-set.seed(123)
-N <- 5  ## number of blocks in sparse covariance matrix
-p <- 2 ## size of each block
-k <- 2  ##
-R <- 10
-    
-## mean vector
-mu <- seq(-3,3,length=k*N+p)
+## ----results='hide'------------------------------------------------------
+D <- binary.sim(N=50, k=2, T=50)
+priors <- list(inv.Sigma=diag(2), inv.Omega=diag(2))
+start <- rep(c(-1,1),51)
+opt <- trust.optim(start,
+                   fn=sparseMVN::binary.f,
+                   gr=sparseMVN::binary.grad,
+                   hs=sparseMVN::binary.hess,
+                   data=D, priors=list(inv.Sigma=diag(2),
+                                       inv.Omega=diag(2)),
+                   method="Sparse",
+                   control=list(function.scale.factor=-1))
 
-## build random block-arrow covariance/precision matrix for test
-Q1 <- tril(kronecker(diag(N), Matrix(seq(0.1,1.1,length=k*k),k,k)))
-Q2 <- Matrix(rnorm(N*k*p), p, N*k)
-Q3 <- tril(0.2*diag(p))
-Sigma <- rBind(cBind(Q1, Matrix(0, N*k, p)), cBind(Q2, Q3))
-Sigma <- Matrix::tcrossprod(Sigma)
-class(Sigma)
+## ------------------------------------------------------------------------
+R <- 100
+pm <- opt[["solution"]]
+H <- -opt[["hessian"]]
+CH <- Cholesky(H)
+samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
 
-## ----collapse=TRUE-------------------------------------------------------
-chol.Sigma <- Matrix::Cholesky(Sigma)  ## creates a dCHMsimpl object
-x <- rmvn.sparse(R, mu, chol.Sigma, prec=FALSE)
+## ------------------------------------------------------------------------
+logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
 
-## ----collapse=TRUE-------------------------------------------------------
-d <- dmvn.sparse(x, mu, chol.Sigma, prec=FALSE)
-str(d)
+## ------------------------------------------------------------------------
+Matrix::nnzero(H)
+Hinv <- drop0(solve(H))
+Matrix::nnzero(Hinv)
+
+## ------------------------------------------------------------------------
+logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
+all.equal(logf, logf_dense)
 
