@@ -510,21 +510,22 @@ random samples being selected, and whether the underlying matrix is a
 covariance or precision.
 
 <<>>=
+load("runtimes.Rdata")
+runtimes <- ungroup(runtimes)
 TM <- filter(runtimes, stringr::str_detect(step, "[rd]_")) %>%
-    select(-p,-nels) %>%
+    select(-p,-nels,-nnz) %>%
     tidyr::gather(stat,value,c(mean,sd)) %>%
-    reshape2::dcast(s+N+k+prec+nvars+nnz+pct.nnz~step+stat)
+    reshape2::dcast(s+N+k+prec+nvars+nnzLT+pct.nnz~step+stat)
 @ 
 
-When a covariance matrix
+When a covariance matrix:  Table~\ref{tab:timingCov}.
 
 \begin{table}
-  \begin{tabular}{rrrrrrrrrrrrrr}
+  \begin{tabular}{rrrrrr|rrrrrrrr}
     \toprule
 &&&&&&\multicolumn{4}{c}{random}&\multicolumn{4}{c}{density}\\
 &&&&&pct&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}\\
- samples&$N$&$k$&vars&nnz&nnz&mean&sd&mean&sd&mean&sd&mean&sd\\
-    \midrule
+ $R$&$N$&$k$&vars&nnz&nnz&mean&sd&mean&sd&mean&sd&mean&sd\\
 <<echo=FALSE,results='asis'>>=
 filter(TM, !prec) %>%
     select(-prec) %>%
@@ -532,10 +533,37 @@ filter(TM, !prec) %>%
     print(only.contents=TRUE,include.colnames=FALSE,size="small")
 @ 
 \end{tabular}
+\caption{Time (milliseconds) to simulate $R$ MVN samples, or compute
+  $R$ MVN densities, using sparse (\func{rmvn.sparse},
+  \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
+  methods, for a covariance matrix with a block-arrow structure. $N$ is
+number of blocks, $k$ is the size of the block, nnz is the number of
+non-zeros in the lower triangle of the matrix, and pct.nnz is the
+percentage of elements that are nonzero (a measure of sparsity). Means
+and standard deviations are across XX replications.}\label{tab:timingCov}
 \end{table}
 
+When a precision matrix:  Table~\ref{tab:timingPrec}.
 
-
+\begin{table}
+  \begin{tabular}{rrrrrr|rrrrrrrr}
+    \toprule
+&&&&&&\multicolumn{4}{c}{random}&\multicolumn{4}{c}{density}\\
+&&&&&pct&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}\\
+ $R$&$N$&$k$&vars&nnz&nnz&mean&sd&mean&sd&mean&sd&mean&sd\\
+<<echo=FALSE,results='asis'>>=
+filter(TM, prec) %>%
+    select(-prec) %>%
+    xtable(digits=c(rep(0,6),rep(2,9))) %>%
+    print(only.contents=TRUE,include.colnames=FALSE,size="small")
+@ 
+\end{tabular}
+\caption{Time (milliseconds) to simulate $R$ MVN samples, or compute
+  $R$ MVN densities, using sparse (\func{rmvn.sparse},
+  \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
+  methods, for a precision matrix with a block-arrow structure. See
+  caption to Table~\ref{tab:timingCov} for definitions of columns.}\label{tab:timingPrec}
+\end{table}
 
 The times were generated from the code in \filename{vignettes/replication.R}. 
 

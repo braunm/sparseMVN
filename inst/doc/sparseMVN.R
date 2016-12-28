@@ -77,13 +77,21 @@ logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
 all.equal(logf, logf_dense)
 
 ## ------------------------------------------------------------------------
+load("runtimes.Rdata")
+runtimes <- ungroup(runtimes)
 TM <- filter(runtimes, stringr::str_detect(step, "[rd]_")) %>%
-    select(-p,-nels) %>%
+    select(-p,-nels,-nnz) %>%
     tidyr::gather(stat,value,c(mean,sd)) %>%
-    reshape2::dcast(s+N+k+prec+nvars+nnz+pct.nnz~step+stat)
+    reshape2::dcast(s+N+k+prec+nvars+nnzLT+pct.nnz~step+stat)
 
 ## ----echo=FALSE,results='asis'-------------------------------------------
 filter(TM, !prec) %>%
+    select(-prec) %>%
+    xtable(digits=c(rep(0,6),rep(2,9))) %>%
+    print(only.contents=TRUE,include.colnames=FALSE,size="small")
+
+## ----echo=FALSE,results='asis'-------------------------------------------
+filter(TM, prec) %>%
     select(-prec) %>%
     xtable(digits=c(rep(0,6),rep(2,9))) %>%
     print(only.contents=TRUE,include.colnames=FALSE,size="small")
