@@ -50,7 +50,7 @@ get_times <- function(D, reps=100) {
 
 reps <- 10
 ## times in milliseconds
-TM <- expand.grid(s = c(20, 100),
+runtimes <- expand.grid(s = c(20, 100),
                  N = c(5, 10, 15),
                  k = 3,
                  p = 3,
@@ -65,8 +65,9 @@ TM <- expand.grid(s = c(20, 100),
            nels = nvars^2,
            nnz = N*k^2 + p^2 + 2*N*k*p,
            nnzLT = N * k*(k+1)/2 + p*(p+1)/2 + p*N*k,
-           pct.nnz = nnz/nels)
+           pct.nnz = nnz/nels) %>%
+    ungroup()
 
-save(TM, file="vignettes/runtimes.Rdata")
+save(runtimes, file="vignettes/runtimes.Rdata")
 
 

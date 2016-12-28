@@ -3,6 +3,10 @@ knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
 options(digits=4)
 suppressMessages(library(dplyr))
 suppressMessages(library(scales))
+suppressMessages(library(trustOptim))
+suppressMessages(library(xtable))
+options(xtable.include.rownames=FALSE,
+        xtable.booktabs=TRUE)
 
 ## ----echo=FALSE----------------------------------------------------------
 require(sparseMVN)
@@ -71,4 +75,16 @@ Matrix::nnzero(Hinv)
 ## ------------------------------------------------------------------------
 logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
 all.equal(logf, logf_dense)
+
+## ------------------------------------------------------------------------
+TM <- filter(runtimes, stringr::str_detect(step, "[rd]_")) %>%
+    select(-p,-nels) %>%
+    tidyr::gather(stat,value,c(mean,sd)) %>%
+    reshape2::dcast(s+N+k+prec+nvars+nnz+pct.nnz~step+stat)
+
+## ----echo=FALSE,results='asis'-------------------------------------------
+filter(TM, !prec) %>%
+    select(-prec) %>%
+    xtable(digits=c(rep(0,6),rep(2,9))) %>%
+    print(only.contents=TRUE,include.colnames=FALSE,size="small")
 
