@@ -1,11 +1,13 @@
 library(plyr)
 library(tidyr)
-library(dplyr)
 library(stringr)
+library(dplyr)
 library(Matrix)
 library(mvtnorm)
 library(microbenchmark)
 library(doParallel)
+library(sparseMVN)
+
 registerDoParallel(cores=8)
 
 get_times <- function(D, reps=100) {
@@ -14,6 +16,8 @@ get_times <- function(D, reps=100) {
     k <- D$k ## heterogeneous variables
     N <- D$N ## number of agents
     prec <- D$prec ## 
+
+    cat("s =  ",s,"\tN = ",N,"\tk = ",k,"\tprec = ",prec,"\n") 
 
     mu <- rep(0,k*N + k)  ## assume mean at origin
     Q1 <- tril(kronecker(Matrix(seq(0.1,k,length=k*k),k,k),diag(N)))
