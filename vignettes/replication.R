@@ -55,11 +55,11 @@ get_times <- function(D, reps=100) {
 }
 
 
-reps <- 100
+reps <- 200
 ## times in milliseconds
 cases <- expand.grid(s = 1000,
-                     N = c(25, 250, 1000),
-                     k = 2,
+                     N = c(25, 100, 250, 500, 1000),
+                     k = c(2,4)
                      prec = c(FALSE, TRUE)) %>%
     mutate(nvars=(N+1)*k,
            nels = nvars^2,
@@ -68,12 +68,9 @@ cases <- expand.grid(s = 1000,
            pct.nnz = nnz/nels) 
 
 runtimes <- ddply(cases, c("s","N","k","prec"), get_times, reps=reps,
-                  .parallel=TRUE) %>%
-    group_by(s, N, k, prec, bench.expr) %>%
-    summarize(mean = mean(bench.time/10^6),
-              sd = sd(bench.time/10^6)) %>%
-    ungroup() %>%
-    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
+                  .parallel=TRUE)
+
+
     
 
 save(cases, runtimes, file="vignettes/runtimes.Rdata")
