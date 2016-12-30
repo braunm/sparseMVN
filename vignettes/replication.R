@@ -59,7 +59,7 @@ reps <- 200
 ## times in milliseconds
 cases <- expand.grid(s = 1000,
                      N = c(25, 100, 250, 500, 1000),
-                     k = c(2,4)
+                     k = c(2,4),
                      prec = c(FALSE, TRUE)) %>%
     mutate(nvars=(N+1)*k,
            nels = nvars^2,
