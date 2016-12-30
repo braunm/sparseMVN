@@ -66,7 +66,7 @@ matrices to speed up multivariate normal simpulation and density computation.
 \begin{document}
 
 <<echo=FALSE>>=
-knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE) #$
+knitr::opts_chunk$set(collapse = FALSE, comment = "#", message=FALSE,error=FALSE) #$
 options(digits=4)
 suppressMessages(library(dplyr))
 suppressMessages(library(scales))
@@ -506,12 +506,13 @@ In this section we compare the run times between \func{rmvn.sparse} and
 precision matrix with a
 block-arrow structure as in Figure~\ref{fig:blockarrow}.  Each block
 is $2\times 2$, with two rows on the bottom and right margins.  Cases
-vary in the number of blocks: $N=(\Sexpr(unique(cases[["N"]])))$, and
+vary in the number of blocks: $N=(\Sexpr{unique(cases[["N"]])})$, and
 whether the matrix is a covariance or a precision. The number of
 variables, matrix element, nonzero elements, and sparsity are in Table~\ref{tab:cases}.
 
+\begin{center}
 \begin{table}
-<<results='asis'>>=
+<<echo=FALSE,results='asis'>>=
 load("runtimes.Rdata")
 filter(cases, !prec) %>%
     select(N, nvars, nels, nnz, nnzLT, pct.nnz) %>%
@@ -527,28 +528,30 @@ filter(cases, !prec) %>%
   elements in the lower triangle (nnzLT), and percentage of elements
   that are nonzero (pct.nnz).}\label{tab:cases}
 \end{table}
+\end{center}
 
 
-<<eval=FALSE>>=
-    group_by(s, N, k, prec, bench.expr) %>%
-    summarize(mean = mean(bench.time/10^6),
-              sd = sd(bench.time/10^6)) %>%
-    ungroup() %>%
-    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
-@ 
+% <<eval=FALSE>>=
+%     group_by(s, N, k, prec, bench.expr) %>%
+%     summarize(mean = mean(bench.time/10^6),
+%               sd = sd(bench.time/10^6)) %>%
+%     ungroup() %>%
+%     tidyr::separate(bench.expr, c("step", "storage"), sep="_")
+% @ 
 
-\begin{table}
-  \begin{tabular}{rrrrrrr}
+\begin{table}[tbp]
+  \begin{tabular}{rrrrrrrrrrr}
     \toprule
-&&&\multicolumn{2}{c}{density}&\multicolumn{2}{c}{random}\\
-&&&dense&sparse&dense&sparse
+&&&\multicolumn{4}{c}{density}&\multicolumn{4}{c}{random}\\
+&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+type&$N$&$k$&mean&sd &mean&sd &mean&sd &mean&sd\\
 <<echo=FALSE,results='asis'>>=
 filter(runtimes, step %in% c("rand","density")) %>%
     mutate(type=ifelse(prec,"cov","prec")) %>%
-    select(-s, -k, -prec) %>%
+    select(-s, -prec) %>%
     gather(stat,value, c(mean,sd)) %>%
-    reshape2::dcast(type+N+stat~step+storage) %>%
-    xtable(digits=c(rep(0,4),rep(1,4))) %>%
+    reshape2::dcast(type+N+k~step+storage+stat) %>%
+    xtable(digits=c(rep(0,4),rep(1,8))) %>%
     print(only.contents=TRUE,include.colnames=FALSE)
 @ 
 \end{tabular}
@@ -556,9 +559,41 @@ filter(runtimes, step %in% c("rand","density")) %>%
   1,000 MVN densities, using sparse (\func{rmvn.sparse},
   \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
   methods, for a covariance or precision matrix with a block-arrow structure. $N$ is
-number of blocks; see Table~\ref{tab:cases} for dimensions and
-sparsity of each matrix. Means and standard deviations are across XX replications.}\label{tab:timing}
+number of blocks (heterogeneous units), and $k$ is the size of each
+block (heterogeneous variables); see Table~\ref{tab:cases} for dimensions and
+sparsity of each matrix. Means and standard deviations are across XX replications.}\label{tab:timing1}
 \end{table}
+
+
+Choleksy decompositions (both dense and sparse) and inverting matrices
+(dense only) are the most computationally intensive steps of random
+number generation and density computation.  In
+Table~\ref{tab:timing2}, we show how these times vary with the
+sparsity of the matrix.
+
+\begin{table}[tbp]
+  \begin{tabular}{rrrrrrrrrrrr}
+    \toprule
+&&&&\multicolumn{4}{c}{Cholesky}&\multicolumn{4}{c}{invert}\\
+&&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+$N$&$k$&nvars&nnz.pct&mean&sd &mean&sd &mean&sd &mean&sd\\
+<<echo=FALSE,results='asis'>>=
+tmp <- filter(cases, prec) %>%
+    select(N,k,nvars,pct.nnz)
+filter(runtimes, step %in% c("chol","solve") & prec) %>%
+    select(-s, -prec) %>%
+    gather(stat,value, c(mean,sd)) %>%
+    reshape2::dcast(N+k~step+storage+stat) %>%
+    left_join(tmp, ., by=c("N","k")) %>%
+    xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
+    print(only.contents=TRUE,include.colnames=FALSE)
+@ 
+\end{tabular}
+\caption{Time (milliseconds) for a Cholesky decompositon and matrix
+  inversion of a sparse (\class{dsCMatrix}) or dense matrix.  Inversion was computed with
+  the \func{solve} function. }\label{tab:timing2}
+\end{table}
+
 
 
 The times were generated from the code in \filename{vignettes/replication.R}. 
