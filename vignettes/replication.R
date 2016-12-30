@@ -1,5 +1,7 @@
 library(plyr)
-library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(stringr)
 library(Matrix)
 library(mvtnorm)
 library(microbenchmark)
