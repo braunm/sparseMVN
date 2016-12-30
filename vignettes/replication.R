@@ -4,7 +4,7 @@ library(Matrix)
 library(mvtnorm)
 library(microbenchmark)
 library(doParallel)
-registerDoParallel(cores=4)
+registerDoParallel(cores=8)
 
 get_times <- function(D, reps=100) {
 
@@ -49,11 +49,11 @@ get_times <- function(D, reps=100) {
 }
 
 
-reps <- 10
+reps <- 100
 ## times in milliseconds
-cases <- expand.grid(s = c(20, 100),
-                     N = c(5, 10, 15),
-                     k = 3,
+cases <- expand.grid(s = 1000,
+                     N = c(25, 250, 1000),
+                     k = 2,
                      prec = c(FALSE, TRUE)) %>%
     mutate(nvars=(N+1)*k,
            nels = nvars^2,
@@ -62,7 +62,7 @@ cases <- expand.grid(s = c(20, 100),
            pct.nnz = nnz/nels) 
 
 runtimes <- ddply(cases, c("s","N","k","prec"), get_times, reps=reps,
-                  .parallel=FALSE) %>%
+                  .parallel=TRUE) %>%
     group_by(s, N, k, prec, bench.expr) %>%
     summarize(mean = mean(bench.time/10^6),
               sd = sd(bench.time/10^6)) %>%
