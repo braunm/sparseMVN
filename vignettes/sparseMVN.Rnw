@@ -11,6 +11,7 @@
 \usepackage{booktabs}
 \usepackage{etoolbox}
 \usepackage{placeins}
+\usepackage{array}
  
 \newcommand{\func}[1]{\code{#1}}
 \newcommand{\class}[1]{\textsl{#1}}
@@ -107,15 +108,15 @@ atomic operations that involve the zeros in the matrices.
 \section{Background}
 
 
-Let $x\in\Real{k}$ be a realization of random variable
-$X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{k}$ is a vector,
-$\Sigma\in\Real{k\times k}$ is a positive-definite covariance matrix,
-and $\Sigma^{-1}\in\Real{k\times k}$ is a positive-definite precision matrix. 
+Let $x\in\Real{M}$ be a realization of random variable
+$X\sim\MVN{\mu,\Sigma}$, where $\mu\in\Real{M}$ is a vector,
+$\Sigma\in\Real{M\times M}$ is a positive-definite covariance matrix,
+and $\Sigma^{-1}\in\Real{M\times M}$ is a positive-definite precision matrix. 
 
 The log probability density of $x$ is
 
 \begin{align}
-\log f(x)&=-\frac{k}{2} \log (2\pi) - \frac{1}{2}\log|\Sigma|
+\log f(x)&=-\frac{M}{2} \log (2\pi) - \frac{1}{2}\log|\Sigma|
   -\frac{1}{2}z^\top z,\quad\text{where}~z^\top z=\left(x-\mu\right)^\top\Sigma^{-1}\left(x-\mu\right)
  \end{align}
 
@@ -138,8 +139,8 @@ the factors.
 \begin{align}
   \label{eq:logDet}
   \log|\Sigma|= \begin{cases}
-    \phantom{-}2\sum_{k=1}^K\log L_{kk}&\text{ when $\Sigma$ is given}\\
-    -2\sum_{k=1}^K\log \Lambda_{kk}&\text{ when $\Sigma^{-1}$ is given}
+    \phantom{-}2\sum_{m=1}^M\log L_{mm}&\text{ when $\Sigma$ is given}\\
+    -2\sum_{m=1}^M\log \Lambda_{mm}&\text{ when $\Sigma^{-1}$ is given}
     \end{cases}
 \end{align}
 
@@ -151,14 +152,14 @@ triangular system $Lz=x-\mu$.  The subsequent $z^\top z$
 computation is trivially fast. 
 
 
-The algorithm for simulating from an $\MVN{\mu,\Sigma}$ distribution
+The algorithm for simulating from an $\MVN{\mu,\Sigma}$ distribution also
 depends on whether
 $\Sigma$ or $\Sigma^{-1}$ is given.  As above, we start by computing
 the Cholesky decomposition of the given matrix. Then, let
-$z\sim\MVN{0,I_k}$ be a vector of $k$ samples from a standard normal distribution. If $\Sigma$ is given,
+$z\sim\MVN{0,I_M}$ be a vector of $M$ samples from a standard normal distribution. If $\Sigma$ is given,
 then $x=Lz+\mu$.  If $\Sigma^{-1}$ is given, then solve for $x$ in the
 triangular linear system $\Lambda^\top\left(x-\mu\right)=z$.  Because
-$\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_k$, $x$ is a sample from $\MVN{\mu,\Sigma}$.
+$\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_M$, $x$ is a sample from $\MVN{\mu,\Sigma}$.
  \begin{align}
  \EV{x}&=\EV{Lz+\mu}=\EV{\Lambda^\top z+\mu}=\mu\\
    \Cov{x}&= \Cov{Lz+\mu}=\EV{Lzz^\top L^\top}=LL^\top=\Sigma\\
@@ -169,13 +170,13 @@ $\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_k$, $x$ is a sample from $\MVN{\mu,\Sigma
  
 These algorithms apply when the covariance/precision matrix is either
 sparse or dense.  When the matrix is dense, the computational
-complexity is $\bigO{k^3}$  for a Cholesky decomposition, and
-$\bigO{k^2}$ for either solving the triangular linear
+complexity is $\bigO{M^3}$  for a Cholesky decomposition, and
+$\bigO{M^2}$ for either solving the triangular linear
 system or multiplying a triangular matrix by another matrix
 \citep{GolubVanLoan1996}.  Thus, the computational cost grows
-cubically with $k$ before the decomposition step, and quadratically if
+cubically with $M$ before the decomposition step, and quadratically if
 the decomposition has already been completed.  Additionally, the storage
-requirement for $\Sigma$ grows quadratically with $k$.
+requirement for $\Sigma$ grows quadratically with $M$.
  
 
 \subsection{Existing implementations}
@@ -231,27 +232,30 @@ compressed format, which we will describe next.
 
 By ``sparse matrix,'' we mean a matrix for which relatively few elements
 are non-zero.  The \pkg{Matrix} package \citep{R_Matrix} defines
-various classes for storing sparse matrices in a compressed format,
-and the distinctions among them are beyond the scope of this
+various classes for storing sparse matrices in compressed formats,
+and the distinctions among those classes are beyond the scope of this
 paper.  The most important one for our purposes is a
 \class{dsCMatrix}, which defines a symmetric matrix, with numeric
 (double precision) elements, in a column-compressed format.  Three
 vectors define the underlying matrix:
 the unique nonzero values (just one triangle is needed), the indices
 in the value vector for the first value in each column, and the indices of the rows in
-which each value is located. Roughly speaking, the storage requirement
-for a sparse $k\times k$ symmetric matrix with $z$ unique non-zero
-elements in one triangle is $z$ double precision numbers, $z+k+1$ integers, and
-some metadata.  In contrast, a dense representation of the same matrix would
-contain $k^2$ double precision values, regardless of symmetry and the number of
-zeros. The more sparse the matrix, the greater the memory consumption
-gains from a sparse matrix format.
+which each value is located. Roughly speaking, the storage requirements
+for a sparse $M\times M$ symmetric matrix with $Z$ unique non-zero
+elements in one triangle are for $Z$ double precision numbers, $Z+M+1$ integers, and
+some metadata.  In contrast, a dense representation of the same matrix
+stores $M^2$ double precision values, regardless of symmetry and the number of
+zeros. If $Z$ grows more slowly than $M^2$, the matrix becomes
+increasingly sparse (a smaller percentage of elements are nonzero),
+and there are greater efficiency gains from storing the matrix in a
+compressed sparse format.
 
 \subsubsection{An example}
 
 To illustrate how sparse matrices require less memory resources when
 compressed than when stored densely, consider the following example,
-which is borrowed heavily from the vignette of the \pkg{sparseHessianFD} package \citep{R_sparseHessianFD}.
+which is borrowed heavily from the vignette of the
+\pkg{sparseHessianFD} package \citep{R_sparseHessianFD}.
 
 Suppose we have a dataset of $N$ households, each with $T$
  opportunities to purchase a particular product.  Let $y_i$ be the
@@ -273,8 +277,8 @@ Suppose we have a dataset of $N$ households, each with $T$
 
 The coefficient vectors $\beta_i$ are distributed across the population of households
 following a multivariate normal distribution with mean $\mu\in\Real{k}$ and
-covariance $\Mat{\Sigma}\in\Real{k\times k}$.   Assume that we know
-$\Mat{\Sigma}$, but not $\mu$, so we place a multivariate normal prior
+covariance $\Mat{V}\in\Real{k\times k}$.   Assume that we know
+$\Mat{V}$, but not $\mu$, so we place a multivariate normal prior
 on $\mu$, with mean $0$ and
 covariance $\Mat{\Omega}\in\Real{k\times k}$.  Thus, the parameter
 vector $x\in\Real{(N+1)k}$ consists of the $Nk$ elements in the $N$ $\beta_i$ vectors,
@@ -283,8 +287,8 @@ and the $k$ elements in $\mu$.
 The log posterior density, ignoring any normalization constants, is
 \begin{align}
   \label{eq:LPD}
-  \log \pi(\beta_{1:N},\mu|\Mat{Y}, \Mat{Z}, \Mat{\Sigma},\Mat{\Omega})=\sum_{i=1}^N\left(p_i^{y_i}(1-p_i)^{T-y_i}
-  -\frac{1}{2}\left(\beta_i-\mu\right)^\top\Mat{\Sigma}^{-1}\left(\beta_i-\mu\right)\right)
+  \log \pi(\beta_{1:N},\mu|\Mat{Y}, \Mat{Z}, \Mat{V},\Mat{\Omega})=\sum_{i=1}^N\left(p_i^{y_i}(1-p_i)^{T-y_i}
+  -\frac{1}{2}\left(\beta_i-\mu\right)^\top\Mat{V}^{-1}\left(\beta_i-\mu\right)\right)
 -\frac{1}{2}\mu^\top\Mat{\Omega}^{-1}\mu
 \end{align}
 <<echo=FALSE>>=
@@ -316,7 +320,7 @@ distributed, and the $y_i$ are
 conditionally independent, the cross-partial derivatives between an
 element of $\beta_i$ and any element of any $\beta_j$ for $j\neq i$,
 must be zero.  When $N$ is much greater than $k$, there will be many
-more zero cross-partial derivatives than non-zero, and the Hessian of
+more zero cross-partial derivatives than nonzero, and the Hessian of
 the log posterior density will be sparse.
 
 The sparsity pattern depends on how the variables are
@@ -328,7 +332,7 @@ at the end.
 \end{align}
 In this case, the Hessian has a ``block-arrow'' structure.  For example,
 if $N=\Sexpr{N}$ and $k=\Sexpr{k}$, then there are \Sexpr{nv1} total
-variables, and the Hessian will have the pattern in Figure~\ref{fig:blockarrow}.
+variables, and the Hessian will have the ``block-arrow'' pattern in Figure~\ref{fig:blockarrow}.
 
 \begin{figure}[tbp]\centering
 <<blockarrow, echo=FALSE>>=
@@ -339,12 +343,6 @@ printSpMatrix(as(Mat,"nMatrix"))
 @
 \caption{A ``block-arrow'' sparsity pattern.}\label{fig:blockarrow}
 \end{figure}
-
-
-When $N$ is large, the proportion of non-zero elements in the Hessian is small,
-and thus the Hessian is sparse. For example, if $N=\Sexpr{N},~k= \Sexpr{k}$, and $p= \Sexpr{p}$, then there
-are \Sexpr{nv1} total variables, and the Hessian will have the
-following ``block-arrow'' pattern.
 
 
 <<echo=FALSE, results="hide">>=
@@ -375,14 +373,11 @@ while a sparse symmetric matrix of the \class{dsCMatrix} class requires only \Se
 This example is relevant because, when evaluated at the posterior
 mode, the Hessian is the precision matrix of a MVN approximatation to
 the posterior distribution of $\left(\beta_{1:N},\mu\right)$. If we
-were to simulate from this MVN using the \pkg{mvtnorm} package, we
-would first need to invert the dense $\Sigma^{-1}$ matrix to get the covariance
-matrix.  Each call to \func{rmvnorm} would involve a new decomposition
-of $\Sigma$, which is wasteful if $\Sigma$ has not changed from the
-previous call.  Using \pkg{sparseMVN}, $\Sigma^{-1}$ is stored in a
-sparse compressed format, does not need to be inverted explicitly, and
-can be factorized only once in advance of repeated calls to the
-relevant functions.
+were to simulate from this MVN using the \pkg{mvtnorm} function
+\func{rmvnorm}, or evaluate MVN densities using \pkg{dmvnorm}, we
+would first need to invert the dense Hessian to get the covariance
+matrix $\Sigma$. Internally, these functions invoke dense linear
+algebra routines, including matrix factorization.
 
 
 
@@ -510,10 +505,19 @@ vary in the number of blocks: $N=(\Sexpr{unique(cases[["N"]])})$, and
 whether the matrix is a covariance or a precision. The number of
 variables, matrix element, nonzero elements, and sparsity are in Table~\ref{tab:cases}.
 
+
+<<eval=FALSE>>=
+load("runtimes.Rdata")
+RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
+    summarize(mean = mean(bench.time/10^6),
+              sd = sd(bench.time/10^6)) %>%
+    ungroup() %>%
+    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
+@ 
+
 \begin{center}
 \begin{table}
 <<echo=FALSE,results='asis'>>=
-load("runtimes.Rdata")
 filter(cases, !prec) %>%
     select(N, nvars, nels, nnz, nnzLT, pct.nnz) %>%
     xtable::xtable(digits=c(rep(0,6),3)) %>%
@@ -531,28 +535,26 @@ filter(cases, !prec) %>%
 \end{center}
 
 
-% <<eval=FALSE>>=
-%     group_by(s, N, k, prec, bench.expr) %>%
-%     summarize(mean = mean(bench.time/10^6),
-%               sd = sd(bench.time/10^6)) %>%
-%     ungroup() %>%
-%     tidyr::separate(bench.expr, c("step", "storage"), sep="_")
-% @ 
+
 
 \begin{table}[tbp]
-  \begin{tabular}{rrrrrrrrrrr}
+  \begin{tabular}{rrrrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
     \toprule
-&&&\multicolumn{4}{c}{density}&\multicolumn{4}{c}{random}\\
-&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-type&$N$&$k$&mean&sd &mean&sd &mean&sd &mean&sd\\
+&&&&&&\multicolumn{4}{c}{density}&\multicolumn{4}{c}{random}\\
+&&&&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+type&$N$&$k$&&&&mean&sd &mean&sd &mean&sd &mean&sd\\
 <<echo=FALSE,results='asis'>>=
-filter(runtimes, step %in% c("rand","density")) %>%
+tmp <- filter(cases, prec) %>%
+    select(N,k,nvars,nnz,pct.nnz)
+filter(RT, step %in% c("rand","density")) %>%
     mutate(type=ifelse(prec,"cov","prec")) %>%
     select(-s, -prec) %>%
     gather(stat,value, c(mean,sd)) %>%
     reshape2::dcast(type+N+k~step+storage+stat) %>%
-    xtable(digits=c(rep(0,4),rep(1,8))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE)
+    left_join(tmp, ., by=c("N","k")) %>%
+    xtable(digits=c(rep(0,7),rep(0,8))) %>%
+    print(only.contents=TRUE,include.colnames=FALSE,
+          format.args=list(big.mark=","))
 @ 
 \end{tabular}
 \caption{Time (milliseconds) to simulate 1,000 MVN samples, or compute
@@ -572,7 +574,7 @@ Table~\ref{tab:timing2}, we show how these times vary with the
 sparsity of the matrix.
 
 \begin{table}[tbp]
-  \begin{tabular}{rrrrrrrrrrrr}
+  \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
     \toprule
 &&&&\multicolumn{4}{c}{Cholesky}&\multicolumn{4}{c}{invert}\\
 &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
@@ -580,13 +582,14 @@ $N$&$k$&nvars&nnz.pct&mean&sd &mean&sd &mean&sd &mean&sd\\
 <<echo=FALSE,results='asis'>>=
 tmp <- filter(cases, prec) %>%
     select(N,k,nvars,pct.nnz)
-filter(runtimes, step %in% c("chol","solve") & prec) %>%
+filter(RT, step %in% c("chol","solve") & prec) %>%
     select(-s, -prec) %>%
     gather(stat,value, c(mean,sd)) %>%
     reshape2::dcast(N+k~step+storage+stat) %>%
     left_join(tmp, ., by=c("N","k")) %>%
     xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE)
+    print(only.contents=TRUE,include.colnames=FALSE,
+          format.args=list(big.mark=","))
 @ 
 \end{tabular}
 \caption{Time (milliseconds) for a Cholesky decompositon and matrix
