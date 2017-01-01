@@ -127,13 +127,13 @@ computing $\log|\Sigma|$, and $z^\top z$, \emph{without} explicitly
 inverting $\Sigma$ or repeating mathematical operations.  How one
 performs these steps \emph{efficiently} in practice depends on whether the
 covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is
-available. In both cases, we start by finding a lower triangular matrix root:
+available. For both cases, we start by finding a lower triangular matrix root:
 $\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$.  Since $\Sigma$
 and $\Sigma^{-1}$ are positive definite, we will use the Cholesky
 decomposition, which is the unique matrix root with all positive
 elements on the diagonal.
 
-With the Cholesky decomposition in hand, we can compute the log
+With the Cholesky decomposition in hand, we can then compute the log
 determinant of $\Sigma$ by adding the logs of the diagonal elements of
 the factors.
 \begin{align}
@@ -147,23 +147,22 @@ the factors.
 Having already computed the triangular matrix roots also speeds up the computation of
 $z^\top z$.  If $\Sigma^{-1}$ is given, $z=\Lambda^\top(x-\mu)$ can be computed
 efficiently as the product of an upper triangular matrix and a
-vector. When $\Sigma$ is given, we find $z$ by solving the lower
+vector. When $\Sigma$ is given, we find $z$ by solving for $z$ in the lower
 triangular system $Lz=x-\mu$.  The subsequent $z^\top z$
 computation is trivially fast. 
 
-
-The algorithm for simulating from an $\MVN{\mu,\Sigma}$ distribution also
+The algorithm for simulating  $X\sim\MVN{\mu,\Sigma}$ also
 depends on whether
 $\Sigma$ or $\Sigma^{-1}$ is given.  As above, we start by computing
-the Cholesky decomposition of the given matrix. Then, let
-$z\sim\MVN{0,I_M}$ be a vector of $M$ samples from a standard normal distribution. If $\Sigma$ is given,
-then $x=Lz+\mu$.  If $\Sigma^{-1}$ is given, then solve for $x$ in the
-triangular linear system $\Lambda^\top\left(x-\mu\right)=z$.  Because
-$\EV{z}=0$ and $\Cov{z}=\EV{zz^\top}=I_M$, $x$ is a sample from $\MVN{\mu,\Sigma}$.
+the Cholesky decomposition of the given covariance or precision
+matrix. Define a random variable $Z\sim\MVN(0,I_M)$, and generate a realization
+$z$ as a vector of $M$ samples from a standard normal distribution.  If $\Sigma$ is given,
+then evaluate $x=Lz+\mu$.  If $\Sigma^{-1}$ is given, then solve for $x$ in the
+triangular linear system $\Lambda^\top\left(x-\mu\right)=z$. The resulting $x$ is a sample from $\MVN{\mu,\Sigma}$.
  \begin{align}
- \EV{x}&=\EV{Lz+\mu}=\EV{\Lambda^\top z+\mu}=\mu\\
-   \Cov{x}&= \Cov{Lz+\mu}=\EV{Lzz^\top L^\top}=LL^\top=\Sigma\\
-     \Cov{x}&=\Cov{\Lambda^{\top^{-1}}z+\mu}=\EV{\Lambda^{\top^{-1}}zz^\top\Lambda^{-1}}
+ \EV{X}&=\EV{LZ+\mu}=\EV{\Lambda^\top Z+\mu}=\mu\\
+   \Cov{X}&= \Cov{Lz+\mu}=\EV{LZZ^\top L^\top}=LL^\top=\Sigma\\
+     \Cov{X}&=\Cov{\Lambda^{\top^{-1}}Z+\mu}=\EV{\Lambda^{\top^{-1}}ZZ^\top\Lambda^{-1}}
      =\Lambda^{\top^{-1}}\Lambda^{-1}=(\Lambda\Lambda^\top)^{-1}=\Sigma
  \end{align}
 
@@ -176,7 +175,7 @@ system or multiplying a triangular matrix by another matrix
 \citep{GolubVanLoan1996}.  Thus, the computational cost grows
 cubically with $M$ before the decomposition step, and quadratically if
 the decomposition has already been completed.  Additionally, the storage
-requirement for $\Sigma$ grows quadratically with $M$.
+requirement for $\Sigma$ (or $\Sigma^{-1}$) grows quadratically with $M$.
  
 
 \subsection{Existing implementations}
@@ -495,6 +494,19 @@ all.equal(logf, logf_dense)
 
 \section{Timing}
 
+
+
+
+<<>>=
+load("runtimes.Rdata")
+RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
+    summarize(mean = mean(bench.time/10^6),
+              sd = sd(bench.time/10^6)) %>%
+    ungroup() %>%
+    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
+@ 
+
+
 In this section we compare the run times between \func{rmvn.sparse} and
 \func{rmvnorm}, and between \func{dmvn.sparse} and
 \func{dmvnorm}.  For each case, we construct either a covariance or
@@ -506,14 +518,6 @@ whether the matrix is a covariance or a precision. The number of
 variables, matrix element, nonzero elements, and sparsity are in Table~\ref{tab:cases}.
 
 
-<<eval=FALSE>>=
-load("runtimes.Rdata")
-RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
-    summarize(mean = mean(bench.time/10^6),
-              sd = sd(bench.time/10^6)) %>%
-    ungroup() %>%
-    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
-@ 
 
 \begin{center}
 \begin{table}
@@ -549,7 +553,7 @@ tmp <- filter(cases, prec) %>%
 filter(RT, step %in% c("rand","density")) %>%
     mutate(type=ifelse(prec,"cov","prec")) %>%
     select(-s, -prec) %>%
-    gather(stat,value, c(mean,sd)) %>%
+    tidyr::gather(stat,value, c(mean,sd)) %>%
     reshape2::dcast(type+N+k~step+storage+stat) %>%
     left_join(tmp, ., by=c("N","k")) %>%
     xtable(digits=c(rep(0,7),rep(0,8))) %>%
@@ -584,7 +588,7 @@ tmp <- filter(cases, prec) %>%
     select(N,k,nvars,pct.nnz)
 filter(RT, step %in% c("chol","solve") & prec) %>%
     select(-s, -prec) %>%
-    gather(stat,value, c(mean,sd)) %>%
+    tidyr::gather(stat,value, c(mean,sd)) %>%
     reshape2::dcast(N+k~step+storage+stat) %>%
     left_join(tmp, ., by=c("N","k")) %>%
     xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
