@@ -78,20 +78,70 @@ options(xtable.include.rownames=FALSE,
 @
 
 Simulation from, and calculating the density of, a multivariate normal
-(MVN) distribution linear algebra operations, such as multiplying a matrix with a
-vector or another matrix, decomposing a matrix into factors, and
-solving a system of linear equations. Without futher constraints on
-the covariance or precision matrix, the memory requirements and
+(MVN) distribution involves linear algebra operations, such as matrix
+multiplication and factorization, and solving systems of linear
+equations. When the covariance matrix (or its inverse, the precision
+matrix) is stored in a standard \pkg{base} \proglang{R}  ``dense''
+format, the memory requirements and
 computational complexity of these component steps grow faster than
-the dimension of the MVN-distributed random variable. Because existing
-methods of working with the MVN distribution in \proglang{R} treat the
-covariance matrix as dense, these methods are not practical tools for
-working with high-dimensional problems.
+the dimension of the random variable.  Thus, existing
+\proglang{R} functions for working with the MVN distribution are not
+practical for high-dimensional problems.
 
-However, in many cases the
+However, for many applications the
 covariance or precision matrix is sparse, meaning that the proportion
 of non-zero elements is small, relative to the total size of the
-matrix. The \pkg{sparseMVN} package exploits that sparsity when
+matrix. The functions in the \pkg{sparseMVN} package exploit that
+sparsity to gain efficiencies in computing the density of, and
+simulating from, an MVN random variable.  Instead of requiring the
+user to supply a dense covariance matrix, the functions in
+\pkg{sparseMVN} accept a sparse Cholesky decomposition of either the
+covariance or precision matrix.  This approach lets us use the sparse
+matrix functions in the \pkg{Matrix} package for internal
+computation. In addition, the \pkg{sparseMVN} functions give the user
+the option of supplying a representation of the precision instead of
+the covariance.  This allows the user to avoid explicit inversion of a
+precision matrix to get the covariance when the precision is more
+readily available.
+
+
+
+This approach has the following advantages:
+
+\begin{enumerate}
+\item Because the user performs a Cholesky decomposition before
+  calling the \pkg{sparseMVN} function, repeated calls to these
+  functions does not require repeated factorizations.
+\item The matrix factors are stored in a compressed sparse format, so
+  memory and computational requirements make these functions practical
+  for large problems.
+\item If the precision matrix is more readily available than the
+  covariance matrix, the user can supply it diBy allowing the user to supply a precision matrix, it is no
+  longer necessary to invert 
+  calling Because the Cholesk
+\end{enumerate}
+
+
+The \pkg{Matrix} package defines classes for storing sparse
+matrices in compressed formats, in which only the values and indices
+of nonzero elements are stored. \pkg{Matrix} also provides functions
+for operations on sparse matrices that, by avoiding operations on
+matrix elements that are known to be zero, are much more efficient than
+their dense counterparts.
+
+The \pkg{sparseMVN} package provides functions to compute the MVN
+density, and sample from MVN random variates, when the covariance or
+precision matrix is sparse.  These functions
+
+
+
+The underlying algorithms are well-established
+
+
+accept sparse
+matrices
+
+when
 computing the MVN density, and sampling MVN random variates.
 Matrices stored in a compressed sparse format consume less memory than
 dense matrices of the same dimension (the zeros are not stored
