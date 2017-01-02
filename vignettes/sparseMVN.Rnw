@@ -77,82 +77,81 @@ options(xtable.include.rownames=FALSE,
         xtable.booktabs=TRUE)
 @
 
-Simulation from, and calculating the density of, a multivariate normal
-(MVN) distribution involves linear algebra operations, such as matrix
-multiplication and factorization, and solving systems of linear
-equations. When the covariance matrix (or its inverse, the precision
-matrix) is stored in a standard \pkg{base} \proglang{R}  ``dense''
-format, the memory requirements and
-computational complexity of these component steps grow faster than
-the dimension of the random variable.  Thus, existing
-\proglang{R} functions for working with the MVN distribution are not
-practical for high-dimensional problems.
+The \pkg{mvtnorm} package \citep{R_mvtnorm} provides the
+\func{dmvnorm} function to compute the density of a multivariate
+normal (MVN) distributon, and
+the \func{rmvnorm} function to simulate
+MVN random variables.  These functions require the user to supply a
+covariance matrix as one of the arguments; if the precision matrix is
+more readily available, the user must first invert it explicitly.
+This covariance matrix is
+``dense,'' in the sense that, for an $M$-dimensional MVN random
+variable, all $M^2$ elements are stored, so memory
+requirements grow quadratically with the size of the problem.
+Internally, both functions factor the covariance matrix using a
+Cholesky decomposition, whose complexity is
+$\bigO{M^3}$\citep{GolubVanLoan1996}.\footnote{\func{dmvnorm} has options for eigen and
+  singular value decompositions. These are both $\bigO{M^3}$ as well.}  This
+factorization is performed every time the function is called, even if it does not
+change from call to call.  Also, \func{rmvnorm} involves
+multiplication of a triangular matrix, and \func{dmvnorm} involves
+solving a triangular linear system.  Both of these operations are
+$\bigO{M^2}$ \citep{GolubVanLoan1996}.  MVN
+functions in other packages, such as \pkg{MASS} \citep{R_MASS} and \pkg{LaplacesDemon}
+\citep{R_LaplacesDemon}, face similar
+limitations.\footnote{\pkg{LaplacesDemon} does offer options for the user to supply pre-factored
+covariance and precision matrices.  This avoids repeated calls to the $\bigO{M^3}$
+factorization step, but not the $\bigO{M^2}$ matrix multiplication and
+linear system solution steps.}  Thus, existing tools for working with
+the MVN distribution in \proglang{R} are not practical for
+high-dimensional MVN random variables.
 
 However, for many applications the
 covariance or precision matrix is sparse, meaning that the proportion
 of non-zero elements is small, relative to the total size of the
-matrix. The functions in the \pkg{sparseMVN} package exploit that
-sparsity to gain efficiencies in computing the density of, and
-simulating from, an MVN random variable.  Instead of requiring the
-user to supply a dense covariance matrix, the functions in
-\pkg{sparseMVN} accept a sparse Cholesky decomposition of either the
-covariance or precision matrix.  This approach lets us use the sparse
-matrix functions in the \pkg{Matrix} package for internal
-computation. In addition, the \pkg{sparseMVN} functions give the user
-the option of supplying a representation of the precision instead of
-the covariance.  This allows the user to avoid explicit inversion of a
-precision matrix to get the covariance when the precision is more
-readily available.
-
-
-
-This approach has the following advantages:
+matrix. The \pkg{sparseMVN} package exploits that
+sparsity to reduce memory requirements, and to gain computational
+efficiencies, when computing the MVN density (\func{dmvn.sparse}), and
+simulating from an MVN
+random variable (\func{rmvn.sparse}).  Instead of requiring the
+user to supply a dense covariance matrix, \func{dmvn.sparse} and
+\func{rmvn.sparse} accept a pre-computed Cholesky decomposition of either the
+covariance or precision matrix in a compressed sparse format. This
+approach has several advantages:
 
 \begin{enumerate}
-\item Because the user performs a Cholesky decomposition before
-  calling the \pkg{sparseMVN} function, repeated calls to these
-  functions does not require repeated factorizations.
-\item The matrix factors are stored in a compressed sparse format, so
-  memory and computational requirements make these functions practical
-  for large problems.
-\item If the precision matrix is more readily available than the
-  covariance matrix, the user can supply it diBy allowing the user to supply a precision matrix, it is no
-  longer necessary to invert 
-  calling Because the Cholesk
+\item Memory requirements are much lower because only the nonzero
+  elements of the matrix are stored in a compressed sparse format.
+\item Linear algebra algorithms that are optimzed for sparse matrices
+  are more efficient becuase they avoid operations on matrix elements that are known to be zero.
+\item When it is the precision matrix that is initially available,
+  there is no need to invert it into a covariance matrix explicitly.
+  This feature of \pkg{sparseMVN} preserves sparsity, because the inverse of a sparse matrix is
+  not necessarily sparse.
+\item The Cholesky factor of the matrix is computed once, before the
+  first \pkg{sparseMVN} function call, and is not repeated with any subsequent calls
+  (as long as the matrix does not change).
 \end{enumerate}
+  
+  
+The functions in \pkg{sparseMVN} rely on sparse matrix classes and
+functions that are defined in the \pkg{Matrix} package
+\citep{R_Matrix}.  The user defines the covariance or precision matrix
+as a sparse, symmetric \class{dsCMatrix} matrix, and computes the
+sparse Cholesky factor using the \func{Cholesky} function. Other than ensuring that
+the factor for the covariance or precision matrix is in the correct
+format, the \func{dmvn.sparse} and \func{rmvn.sparse} functions behave
+in much the same way as the corresponding \pkg{mvtnorm} functions
+\func{dmvnorm} and \func{rmvnorm}.  Internally, \pkg{sparseMVN} uses
+standard methods of computing the MVN density and simulating MVN
+random variables (see Section XX), except that sparse-optimized
+algorithms are used for linear algebra operations.  
+
+XXX
 
 
-The \pkg{Matrix} package defines classes for storing sparse
-matrices in compressed formats, in which only the values and indices
-of nonzero elements are stored. \pkg{Matrix} also provides functions
-for operations on sparse matrices that, by avoiding operations on
-matrix elements that are known to be zero, are much more efficient than
-their dense counterparts.
-
-The \pkg{sparseMVN} package provides functions to compute the MVN
-density, and sample from MVN random variates, when the covariance or
-precision matrix is sparse.  These functions
 
 
-
-The underlying algorithms are well-established
-
-
-accept sparse
-matrices
-
-when
-computing the MVN density, and sampling MVN random variates.
-Matrices stored in a compressed sparse format consume less memory than
-dense matrices of the same dimension (the zeros are not stored
-explicitly), and operations like
-matrix-vector multiplication, solving linear systems, and
-computing Cholesky factors, can be performed more efficiently. Many
-linear algebra libraries, such as those called by the \pkg{Matrix}
-package, include routines that are
-optimized for sparse matrices.  These routines are much faster than
-their dense matrix counterparts because they effectively skip over
-atomic operations that involve the zeros in the matrices.
 
 
 \section{Background}
@@ -226,54 +225,6 @@ system or multiplying a triangular matrix by another matrix
 cubically with $M$ before the decomposition step, and quadratically if
 the decomposition has already been completed.  Additionally, the storage
 requirement for $\Sigma$ (or $\Sigma^{-1}$) grows quadratically with $M$.
- 
-
-\subsection{Existing implementations}
-
-Most, if not all, computer implementations of MVN functions follow
-this approach, at least in part.  We have found three \proglang{R} packages that
-provide MVN functions in some form; their features are summarized in
-Table~\ref{tab:MVNpackages}. The \pkg{mvtnorm} \citep{R_mvtnorm} is
-likely the most popular, and it is the only one of the three that is
-``purpose built'' for multivariate distributions. Its functionality is
-broader than \pkg{sparseMVN}, in that it computes
-cumulative probabilities and quantiles in additon to densities and
-random simulates, and supports the mulivariate t distribution as well
-as the MVN.  Its MVN implementation is reasonably mature, so we will
-use \pkg{mvtnorm} as the baseline against which
-we will compare \pkg{sparseMVN} later in this paper. 
-\pkg{LaplacesDemon} \cite{R_LaplacesDemon}  is a more general Bayesian
-estimation package that includes MVN functions.  Unlike \pkg{mvtnorm},
-but like \pkg{sparseMVN}, it has options for the user to provide a
-precision matrix instead of a covariance, and to provide a Cholesky
-decomposition instead of the
-full matrix. The \pkg{MASS} package \citep{R_MASS} includes a simple
-function for MVN random number generation, but not a function to
-compute the MVN density.  However, none of these package support
-covariance or precision matrices that are stored in a sparse
-compressed format, which we will describe next.
- 
-
-
-\begin{table}
-\begin{tabular}{llcccccc}
-  \toprule
-  Package&Citation&dens&rand&sparse&prec&Chol&prob\\
-  \midrule
-  \pkg{mvtnorm}&\citep{R_mvtnorm}&x&x& & & &x\\
-  \pkg{LaplacesDemon}&\citep{R_LaplacesDemon}&x&x& &x&x\\
-  \pkg{MASS}&\citep{R_MASS}& &x& & & &\\
-  \pkg{sparseMVN}&this package&x&x&x&x&x&\\
-  \bottomrule
-\end{tabular}
-\caption{Comparison of capabilities of \proglang{R} packages that
-  implement MVN functions. dens: computes density. rand: generates
-  random simulates. sparse: accepts matrices in
-  sparse format.  prec: option to provide precision matrix. Chol:
-  option to provide a precomputed Cholesky decomposition. Prob:
-  computes cumulative probabilities.}\label{tab:MVNpackages}
-\end{table}
-
  
 
  
