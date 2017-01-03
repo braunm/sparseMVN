@@ -150,6 +150,110 @@ algorithms are used for linear algebra operations.
 XXX
 
 
+\section{Using the sparseMVN package}
+
+The \func{rmvn.sparse} generates random simulates for an MVN
+distribution, and \func{dmvn.sparse} computes the MVN log density.
+The signatures are
+
+
+<<eval=FALSE>>=
+rmvn.sparse(ndraws, mu, CH, prec=TRUE, log=TRUE)
+dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
+@
+
+The argument \funcarg{x} is a matrix with each MVN sample in a
+row. \func{rmvn.sparse} returns a matrix $x$ with \funcarg{ndraws}
+rows and \func{length(mu)} columns.  \func{dmvn.sparse} returns a
+vector of length \funcarg{ndraws}: densities if \funcarg{log=FALSE},
+and log densities if \funcarg{log=TRUE}. \funcarg{mu} is a numeric vector.
+
+\funcarg{CH} is either a \class{dCHMsimpl} or
+\class{dCHMsuper} object, and is computed using the func{Cholesky} function in
+the \pkg{Matrix} package.  The \funcarg{prec} argument identifies if \funcarg{CH} is the
+decomposition of either the covariance ($\Sigma$, \funcarg{prec=FALSE}) or
+precision ($\Sigma^{-1}$, \funcarg{prec=TRUE}) matrix.  These functions do
+require the user to compute the Cholesky decomposition beforehand, but
+this needs to be done only once (as long as $\Sigma$ or $\Sigma^{-1}$ does not change).
+
+More details about the \func{Cholesky} function are available in the
+documentation to the \pkg{Matrix} package, but it is a simple function to use.  The first
+argument is a sparse symmetric Matrix stored as a \class{dsCMatrix} object.
+As far as we know, there is no
+particular need to deviate from the defaults of the remaining
+arguments.  If \func{Cholesky} uses a fill-reducing permutation to compute
+\funcarg{CH}, the functions in \pkg{sparseMVN} will handle that directly, with no
+additional user intervention required.
+
+Do not use the \func{chol}
+function in \pkg{base} \proglang{R}.  \func{Cholesky} is designed for decomposing \emph{sparse}
+matrices, which involves permuting rows and columns to maintain
+sparsity of the factor.  The \class{dCHMsimple} and \class{dCHMsuper} objects
+store this permutation, which \func{rmvn.sparse} and \func{dmvn.sparse} need.
+
+\subsection{An example}
+
+Suppose we want to generate samples from an MVN approximation to
+the posterior distribution of our example model.  The package includes
+functions to simulate data for the example, and return the log
+posterior density, gradient and Hessian.  The \func{trust.optim}
+function in the \pkg{trustOptim} package \citep{R_trustOptim} is a
+nonlinear optimizer that accepts a sparse Hessian to accelerate
+convergence.
+
+<<results='hide'>>=
+D <- binary.sim(N=50, k=2, T=50)
+priors <- list(inv.Sigma=diag(2), inv.Omega=diag(2))
+start <- rep(c(-1,1),51)
+opt <- trust.optim(start,
+                   fn=sparseMVN::binary.f,
+                   gr=sparseMVN::binary.grad,
+                   hs=sparseMVN::binary.hess,
+                   data=D, priors=list(inv.Sigma=diag(2),
+                                       inv.Omega=diag(2)),
+                   method="Sparse",
+                   control=list(function.scale.factor=-1))
+@
+
+The posterior mode, and the Hessian evaluated at that point, are
+returned by \func{trust.optim}. They serve as the mean and the negative precision
+of the MVN approximation to the posterior distribution of the model.
+
+<<>>=
+R <- 100
+pm <- opt[["solution"]]
+H <- -opt[["hessian"]]
+CH <- Cholesky(H)
+samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
+@ 
+
+We can then compute the MVN log density for each sample.
+
+<<>>=
+logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
+@ 
+
+The ability to accept a precision matrix, rather than having to invert
+it to a covariance matrix, is a valuable feature of \pkg{sparseMVN}.
+This is because the inverse of a sparse matrix is not necessarily
+sparse. In the following chunk, we invert the Hessian, and drop zero
+values to maintain any remaining sparseness. Note that there are
+\Sexpr{comma(102^2)} total elements in the Hessian.
+
+<<>>=
+Matrix::nnzero(H)
+Hinv <- drop0(solve(H))
+Matrix::nnzero(Hinv)
+@ 
+
+Nevertheless, we should check that the log densities from
+\func{dmvn.sparse} correspond to those that we would get from \func{dmvnorm}.
+
+<<>>=
+logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
+all.equal(logf, logf_dense)
+@ 
+
 
 
 
@@ -385,110 +489,6 @@ algebra routines, including matrix factorization.
 
 
 
-
-\section{Using the sparseMVN package}
-
-The \func{rmvn.sparse} generates random simulates for an MVN
-distribution, and \func{dmvn.sparse} computes the MVN log density.
-The signatures are
-
-
-<<eval=FALSE>>=
-rmvn.sparse(ndraws, mu, CH, prec=TRUE, log=TRUE)
-dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
-@
-
-The argument \funcarg{x} is a matrix with each MVN sample in a
-row. \func{rmvn.sparse} returns a matrix $x$ with \funcarg{ndraws}
-rows and \func{length(mu)} columns.  \func{dmvn.sparse} returns a
-vector of length \funcarg{ndraws}: densities if \funcarg{log=FALSE},
-and log densities if \funcarg{log=TRUE}. \funcarg{mu} is a numeric vector.
-
-\funcarg{CH} is either a \class{dCHMsimpl} or
-\class{dCHMsuper} object, and is computed using the func{Cholesky} function in
-the \pkg{Matrix} package.  The \funcarg{prec} argument identifies if \funcarg{CH} is the
-decomposition of either the covariance ($\Sigma$, \funcarg{prec=FALSE}) or
-precision ($\Sigma^{-1}$, \funcarg{prec=TRUE}) matrix.  These functions do
-require the user to compute the Cholesky decomposition beforehand, but
-this needs to be done only once (as long as $\Sigma$ or $\Sigma^{-1}$ does not change).
-
-More details about the \func{Cholesky} function are available in the
-documentation to the \pkg{Matrix} package, but it is a simple function to use.  The first
-argument is a sparse symmetric Matrix stored as a \class{dsCMatrix} object.
-As far as we know, there is no
-particular need to deviate from the defaults of the remaining
-arguments.  If \func{Cholesky} uses a fill-reducing permutation to compute
-\funcarg{CH}, the functions in \pkg{sparseMVN} will handle that directly, with no
-additional user intervention required.
-
-Do not use the \func{chol}
-function in \pkg{base} \proglang{R}.  \func{Cholesky} is designed for decomposing \emph{sparse}
-matrices, which involves permuting rows and columns to maintain
-sparsity of the factor.  The \class{dCHMsimple} and \class{dCHMsuper} objects
-store this permutation, which \func{rmvn.sparse} and \func{dmvn.sparse} need.
-
-\subsection{An example}
-
-Suppose we want to generate samples from an MVN approximation to
-the posterior distribution of our example model.  The package includes
-functions to simulate data for the example, and return the log
-posterior density, gradient and Hessian.  The \func{trust.optim}
-function in the \pkg{trustOptim} package \citep{R_trustOptim} is a
-nonlinear optimizer that accepts a sparse Hessian to accelerate
-convergence.
-
-<<results='hide'>>=
-D <- binary.sim(N=50, k=2, T=50)
-priors <- list(inv.Sigma=diag(2), inv.Omega=diag(2))
-start <- rep(c(-1,1),51)
-opt <- trust.optim(start,
-                   fn=sparseMVN::binary.f,
-                   gr=sparseMVN::binary.grad,
-                   hs=sparseMVN::binary.hess,
-                   data=D, priors=list(inv.Sigma=diag(2),
-                                       inv.Omega=diag(2)),
-                   method="Sparse",
-                   control=list(function.scale.factor=-1))
-@
-
-The posterior mode, and the Hessian evaluated at that point, are
-returned by \func{trust.optim}. They serve as the mean and the negative precision
-of the MVN approximation to the posterior distribution of the model.
-
-<<>>=
-R <- 100
-pm <- opt[["solution"]]
-H <- -opt[["hessian"]]
-CH <- Cholesky(H)
-samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
-@ 
-
-We can then compute the MVN log density for each sample.
-
-<<>>=
-logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
-@ 
-
-The ability to accept a precision matrix, rather than having to invert
-it to a covariance matrix, is a valuable feature of \pkg{sparseMVN}.
-This is because the inverse of a sparse matrix is not necessarily
-sparse. In the following chunk, we invert the Hessian, and drop zero
-values to maintain any remaining sparseness. Note that there are
-\Sexpr{comma(102^2)} total elements in the Hessian.
-
-<<>>=
-Matrix::nnzero(H)
-Hinv <- drop0(solve(H))
-Matrix::nnzero(Hinv)
-@ 
-
-Nevertheless, we should check that the log densities from
-\func{dmvn.sparse} correspond to those that we would get from \func{dmvnorm}.
-
-<<>>=
-logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
-all.equal(logf, logf_dense)
-@ 
 
 
 
