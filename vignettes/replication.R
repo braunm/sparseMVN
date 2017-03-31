@@ -1,23 +1,23 @@
-library(plyr)
-library(tidyr)
-library(stringr)
-library(dplyr)
-library(Matrix)
-library(mvtnorm)
-library(microbenchmark)
-library(doParallel)
-library(sparseMVN)
+library("sparseMVN")
+library("microbenchmark")
+library("Matrix")
+library("mvtnorm")
+library("dplyr")
 
-registerDoParallel(cores=8)
+##library(tidyr)
+library(doParallel)
+
+
+registerDoParallel(cores=12)
 
 get_times <- function(D, reps=100) {
 
     s <- D$s ## number of random samples
     k <- D$k ## heterogeneous variables
     N <- D$N ## number of agents
-    prec <- D$prec ## 
+    prec <- D$prec ##
 
-    cat("s =  ",s,"\tN = ",N,"\tk = ",k,"\tprec = ",prec,"\n") 
+    cat("s =  ",s,"\tN = ",N,"\tk = ",k,"\tprec = ",prec,"\n")
 
     mu <- rep(0,k*N + k)  ## assume mean at origin
     Q1 <- tril(kronecker(Matrix(seq(0.1,k,length=k*k),k,k),diag(N)))
@@ -33,7 +33,7 @@ get_times <- function(D, reps=100) {
     d.sp <- dmvn.sparse(x.sp, mu, chol.CV, prec=prec)
     d.dens <- dmvnorm(x.sp, mu, sigma, log=TRUE)
     stopifnot(all.equal(d.sp,d.dens))
-    
+
     bench <- microbenchmark(
         chol_sparse = Cholesky(CV.sparse),
         chol_dense = chol(CV.dense),
@@ -50,8 +50,8 @@ get_times <- function(D, reps=100) {
                         function(x) return(data.frame(expr=x$expr,
                                                       time=x$time,
                                                       rep=1:length(x$expr))))
-    
-    data.frame(s=s, N=N, k=k, prec=prec, bench=vals)
+
+    data_frame(s=s, N=N, k=k, prec=prec, bench=vals)
 }
 
 
@@ -65,13 +65,13 @@ cases <- expand.grid(s = 1000,
            nels = nvars^2,
            nnz = N*k^2 + k^2 + 2*N*k*k,
            nnzLT = (N+1) * k*(k+1)/2 + N*k*k,
-           pct.nnz = nnz/nels) 
+           pct.nnz = nnz/nels)
 
-runtimes <- ddply(cases, c("s","N","k","prec"), get_times, reps=reps,
+runtimes <- plyr::ddply(cases, c("s","N","k","prec"), get_times, reps=reps,
                   .parallel=TRUE)
 
 
-    
+
 
 save(cases, runtimes, file="vignettes/runtimes.Rdata")
 
