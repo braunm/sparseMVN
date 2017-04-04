@@ -55,9 +55,9 @@ get_times <- function(D, reps=100) {
 }
 
 
-reps <- 200
+reps <- 20
 ## times in milliseconds
-cases <- expand.grid(s = 1000,
+cases <- expand.grid(s = 250,
                      N = c(25, 100, 250, 500, 1000),
                      k = c(2,4),
                      prec = c(FALSE, TRUE)) %>%
@@ -73,6 +73,6 @@ runtimes <- plyr::ddply(cases, c("s","N","k","prec"), get_times, reps=reps,
 
 
 
-save(cases, runtimes, file="vignettes/runtimes.Rdata")
+##save(cases, runtimes, file="vignettes/runtimes.Rdata")
 
 
