@@ -75,6 +75,9 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(scales))
 suppressPackageStartupMessages(library(trustOptim))
 suppressPackageStartupMessages(library(xtable))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(ggplot2))
+
 knitr::render_sweave()
 knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
                       comment="#", collapse=FALSE) #$
@@ -459,7 +462,7 @@ arguments.  If \func{Cholesky} uses a fill-reducing permutation to compute
 additional user intervention required.  The \func{chol} function in
 \pkg{base} \proglang{R} should not be used.
 
-\subsection{An example}
+\subsection{An example}\label{sec:example}
 
 Suppose we want to generate samples from an MVN approximation to
 the posterior distribution of our example model.  The package includes
@@ -528,33 +531,35 @@ all.equal(logf, logf_dense)
 
 <<echo=FALSE>>=
 load("runtimes.Rdata")
-RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
-    summarize(mean = mean(bench.time/10^6),
-              sd = sd(bench.time/10^6)) %>%
-    ungroup() %>%
-    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
 @
+
+
+
+% <<echo=FALSE>>=
+% RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
+%     summarize(mean = mean(bench.time/10^6),
+%               sd = sd(bench.time/10^6)) %>%
+%     ungroup() %>%
+%     tidyr::separate(bench.expr, c("step", "storage"), sep="_")
+% @
 
 
 In this section we show the efficiency gains from \pkg{sparseMVN} by comparing the run times between \func{rmvn.sparse} and
 \func{rmvnorm}, and between \func{dmvn.sparse} and
-\func{dmvnorm}.  In these tests, we construct covariance and
-precision matrices with a
-block-arrow structure, as in Figure~\ref{fig:blockarrow}.  Each block
-is $k\times k$, with $k$ rows on the bottom and right margins.  Cases
-vary in the number and size of blocks,
-%$N\in\{\Sexpr{unique(cases[["N"]])}\}$,
-and
-whether the matrix is a covariance or a
-precision. Table~\ref{tab:cases} summarizes the case conditions, along
-with the dimension of the random variable ($M=Nk+k$), and number of nonzero elements
-in the matrix.
+\func{dmvnorm}.  In these tests, we construct covariance/precision
+matrices with the same structure as the Hessian of the log posterior
+density of the model in Section \ref{sec:example}.  Parameters are
+ordered such that the matrix has a block-arrow structure, as in
+Figure~\ref{fig:banded}.  The size and sparsity of the test matrices
+vary through manipulation of the number of blocks ($N$), the size of
+each block, and the number of rows/columns in the margin (both $k$).  Each test matrix has
+$(N+1)k$ rows and columns.  Table~\ref{tab:cases} summarizes the case
+conditions.
 
 \begin{table}\centering
 <<echo=FALSE,results='asis'>>=
-filter(cases, !prec) %>%
-    select(`$N$`=N, `$k$`=k, `$M$`=nvars, `$M^2$`=nels,
-           nnz, `nnz (LT)`=nnzLT, `\\% nnz`=pct.nnz) %>%
+select(cases,`$N$`=N, `$k$`=k, `$M$`=nvars, `$M^2$`=nels,
+       nnz, `nnz (LT)`=nnzLT, `\\% nnz`=pct.nnz) %>%
     xtable::xtable(digits=c(rep(0,7),3)) %>%
     print(include.rownames=FALSE,
           floating=FALSE, sanitize.colnames.function=sanitize,
@@ -569,72 +574,107 @@ filter(cases, !prec) %>%
   nnz is the proportion of elements that are nonzero.}\label{tab:cases}
 \end{table}
 
-<<echo=FALSE>>=
-tmp <- filter(cases, prec) %>%
-    select(N,k,nvars,nnz)
-tim1 <- filter(RT, step %in% c("rand","density")) %>%
-    mutate(type=ifelse(prec,"cov","prec")) %>%
-    select(-s, -prec) %>%
-    tidyr::gather(stat,value, c(mean,sd)) %>%
-    reshape2::dcast(type+N+k~step+storage+stat) %>%
-    left_join(tmp, ., by=c("N","k"))
-@
+
+
+% <<echo=FALSE>>=
+% tmp <- filter(cases, prec) %>%
+%     select(N,k,nvars,nnz)
+% tim1 <- filter(RT, step %in% c("rand","density")) %>%
+%     mutate(type=ifelse(prec,"cov","prec")) %>%
+%     select(-s, -prec) %>%
+%     tidyr::gather(stat,value, c(mean,sd)) %>%
+%     reshape2::dcast(type+N+k~step+storage+stat) %>%
+%     left_join(tmp, ., by=c("N","k"))
+% @
 
 
 
-\begin{table}
-  \begin{subtable}{\linewidth}
-  \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-    \toprule
-&&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
-    \cmidrule(lr){5-8}\cmidrule(lr){9-12}
-&&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-    \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-$N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
-    \midrule
-<<echo=FALSE,results='asis'>>=
-filter(tim1, type=="cov") %>%
-    select(-type) %>%
-    xtable(digits=c(rep(0,4),rep(0,9))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
+\begin{figure}[tb]
+<<echo=FALSE,fig.height=3>>=
+fig1 <- filter(tab1, time=="mean_ms") %>%
+    gather(pattern, value, chol_dense:solve_dense) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+    + geom_line() %>%
+    + geom_point() %>%
+    + scale_x_continuous("Number of blocks (N)") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
+    + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
+theme_set(theme_bw())
+fig1
 @
-\bottomrule
-\end{tabular}
-\caption{Starting with covariance matrix.}\label{tab:timing1cov}
-\end{subtable}
-\newline
-\vspace{3ex}
-\newline
- \begin{subtable}{\linewidth}
-  \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-    \toprule
-&&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
-        \cmidrule(lr){5-8}\cmidrule(lr){9-12}
-&&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-      \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-$N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
-    \midrule
-<<echo=FALSE,results='asis'>>=
-filter(tim1, type=="prec") %>%
-    select(-type) %>%
-    xtable(digits=c(rep(0,4),rep(0,9))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
+\caption{Computation time for Cholesky decomposition of sparse and
+  dense matrices, and inversion of dense matrices.}\label{fig:cholSolve}
+\end{figure}
+
+\begin{figure}[tb]
+<<echo=FALSE, fig.height=4>>=
+fig2 <- filter(tab2, time=="mean_ms" & N <= 200) %>%
+    gather(pattern, value, dense_cov:sparse_prec) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+    + geom_line() %>%
+    + geom_point() %>%
+    + scale_x_continuous("Number of blocks (N)") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
+    + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
+fig2
 @
-\bottomrule
-\end{tabular}
-\caption{Starting with precision matrix.}\label{tab:timing1prec}
-\end{subtable}
-\caption{Time (milliseconds) to compute 1,000 MVN densities, and
-  simulate 1,000 MVN samples, using sparse (\func{rmvn.sparse},
-  \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
-  methods, for a covariance or precision matrix with a block-arrow structure. $N$ is
-number of blocks (heterogeneous units), and $k$ is the size of each
-block (heterogeneous variables).  nvars and nnz are, respectively, the size of the
-random vector, and number of nonzero elements in the
-covariance/precision matrix. Means and standard deviations are across XX replications.}\label{tab:timing1}
-\end{table}
+\caption{}\label{fig:densRand}
+\end{figure}
+
+
+% \begin{table}
+%   \begin{subtable}{\linewidth}
+%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
+%     \toprule
+% &&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
+%     \cmidrule(lr){5-8}\cmidrule(lr){9-12}
+% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+%     \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
+% $N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
+%     \midrule
+% <<echo=FALSE,results='asis'>>=
+% filter(tim1, type=="cov") %>%
+%     select(-type) %>%
+%     xtable(digits=c(rep(0,4),rep(0,9))) %>%
+%     print(only.contents=TRUE,include.colnames=FALSE,
+%           format.args=list(big.mark=","),hline.after=NULL)
+% @
+% \bottomrule
+% \end{tabular}
+% \caption{Starting with covariance matrix.}\label{tab:timing1cov}
+% \end{subtable}
+% \newline
+% \vspace{3ex}
+% \newline
+%  \begin{subtable}{\linewidth}
+%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
+%     \toprule
+% &&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
+%         \cmidrule(lr){5-8}\cmidrule(lr){9-12}
+% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+%       \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
+% $N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
+%     \midrule
+% <<echo=FALSE,results='asis'>>=
+% filter(tim1, type=="prec") %>%
+%     select(-type) %>%
+%     xtable(digits=c(rep(0,4),rep(0,9))) %>%
+%     print(only.contents=TRUE,include.colnames=FALSE,
+%           format.args=list(big.mark=","),hline.after=NULL)
+% @
+% \bottomrule
+% \end{tabular}
+% \caption{Starting with precision matrix.}\label{tab:timing1prec}
+% \end{subtable}
+% \caption{Time (milliseconds) to compute 1,000 MVN densities, and
+%   simulate 1,000 MVN samples, using sparse (\func{rmvn.sparse},
+%   \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
+%   methods, for a covariance or precision matrix with a block-arrow structure. $N$ is
+% number of blocks (heterogeneous units), and $k$ is the size of each
+% block (heterogeneous variables).  nvars and nnz are, respectively, the size of the
+% random vector, and number of nonzero elements in the
+% covariance/precision matrix. Means and standard deviations are across XX replications.}\label{tab:timing1}
+% \end{table}
 
 Table~\ref{tab:timing1} presents run times (milliseconds) to compute
 1,000 MVN densities, and generate 1,000 MVN samples, using sparse (\func{rmvn.sparse},
@@ -657,33 +697,39 @@ number generation and density computation.  In
 Table~\ref{tab:timing2}, we show how these times vary with the
 sparsity of the matrix.
 
-\begin{table}
-  \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-    \toprule
-&&&&\multicolumn{4}{c}{Cholesky}&\multicolumn{4}{c}{invert}\\
-    \cmidrule(lr){5-8} \cmidrule(lr){9-12}
-&&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-    \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-$N$&$k$&nvars&nnz.pct&mean&sd&mean&sd &mean&sd&mean&sd\\
-    \midrule
-<<echo=FALSE,results='asis'>>=
-tmp <- filter(cases, prec) %>%
-    select(N,k,nvars,pct.nnz)
-filter(RT, step %in% c("chol","solve") & prec) %>%
-    select(-s, -prec) %>%
-    tidyr::gather(stat,value, c(mean,sd)) %>%
-    reshape2::dcast(N+k~step+storage+stat) %>%
-    left_join(tmp, ., by=c("N","k")) %>%
-    xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
-@
-\bottomrule
-\end{tabular}
-\caption{Time (milliseconds) for a Cholesky decompositon and matrix
-  inversion of a sparse (\class{dsCMatrix}) or dense matrix.  Inversion was computed with
-  the \func{solve} function. }\label{tab:timing2}
-\end{table}
+
+
+
+% \begin{table}
+%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
+%     \toprule
+% &&&&\multicolumn{4}{c}{Cholesky}&\multicolumn{4}{c}{invert}\\
+%     \cmidrule(lr){5-8} \cmidrule(lr){9-12}
+% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
+%     \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
+% $N$&$k$&nvars&nnz.pct&mean&sd&mean&sd &mean&sd&mean&sd\\
+%     \midrule
+% <<echo=FALSE,results='asis'>>=
+% tmp <- filter(cases, prec) %>%
+%     select(N,k,nvars,pct.nnz)
+% filter(RT, step %in% c("chol","solve") & prec) %>%
+%     select(-s, -prec) %>%
+%     tidyr::gather(stat,value, c(mean,sd)) %>%
+%     reshape2::dcast(N+k~step+storage+stat) %>%
+%     left_join(tmp, ., by=c("N","k")) %>%
+%     xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
+%     print(only.contents=TRUE,include.colnames=FALSE,
+%           format.args=list(big.mark=","),hline.after=NULL)
+% @
+% \bottomrule
+% \end{tabular}
+% \caption{Time (milliseconds) for a Cholesky decompositon and matrix
+%   inversion of a sparse (\class{dsCMatrix}) or dense matrix.  Inversion was computed with
+%   the \func{solve} function. }\label{tab:timing2}
+% \end{table}
+
+
+
 
  Code to replicate Tables~\ref{tab:timing1} and \ref{tab:timing2}
 is available as an online supplement to this paper, and in the

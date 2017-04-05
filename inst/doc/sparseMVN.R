@@ -5,6 +5,9 @@ suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(scales))
 suppressPackageStartupMessages(library(trustOptim))
 suppressPackageStartupMessages(library(xtable))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(ggplot2))
+
 knitr::render_sweave()
 knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
                       comment="#", collapse=FALSE) #$
@@ -89,54 +92,35 @@ all.equal(logf, logf_dense)
 
 ## ----echo=FALSE------------------------------------------------------------
 load("runtimes.Rdata")
-RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
-    summarize(mean = mean(bench.time/10^6),
-              sd = sd(bench.time/10^6)) %>%
-    ungroup() %>%
-    tidyr::separate(bench.expr, c("step", "storage"), sep="_")
 
 ## ----echo=FALSE,results='asis'---------------------------------------------
-filter(cases, !prec) %>%
-    select(`$N$`=N, `$k$`=k, `$M$`=nvars, `$M^2$`=nels,
-           nnz, `nnz (LT)`=nnzLT, `\\% nnz`=pct.nnz) %>%
+select(cases,`$N$`=N, `$k$`=k, `$M$`=nvars, `$M^2$`=nels,
+       nnz, `nnz (LT)`=nnzLT, `\\% nnz`=pct.nnz) %>%
     xtable::xtable(digits=c(rep(0,7),3)) %>%
     print(include.rownames=FALSE,
           floating=FALSE, sanitize.colnames.function=sanitize,
           format.args=list(big.mark=","))
 
-## ----echo=FALSE------------------------------------------------------------
-tmp <- filter(cases, prec) %>%
-    select(N,k,nvars,nnz)
-tim1 <- filter(RT, step %in% c("rand","density")) %>%
-    mutate(type=ifelse(prec,"cov","prec")) %>%
-    select(-s, -prec) %>%
-    tidyr::gather(stat,value, c(mean,sd)) %>%
-    reshape2::dcast(type+N+k~step+storage+stat) %>%
-    left_join(tmp, ., by=c("N","k"))
+## ----echo=FALSE,fig.height=3-----------------------------------------------
+fig1 <- filter(tab1, time=="mean_ms") %>%
+    gather(pattern, value, chol_dense:solve_dense) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+    + geom_line() %>%
+    + geom_point() %>%
+    + scale_x_continuous("Number of blocks (N)") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
+    + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
+theme_set(theme_bw())
+fig1
 
-## ----echo=FALSE,results='asis'---------------------------------------------
-filter(tim1, type=="cov") %>%
-    select(-type) %>%
-    xtable(digits=c(rep(0,4),rep(0,9))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
-
-## ----echo=FALSE,results='asis'---------------------------------------------
-filter(tim1, type=="prec") %>%
-    select(-type) %>%
-    xtable(digits=c(rep(0,4),rep(0,9))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
-
-## ----echo=FALSE,results='asis'---------------------------------------------
-tmp <- filter(cases, prec) %>%
-    select(N,k,nvars,pct.nnz)
-filter(RT, step %in% c("chol","solve") & prec) %>%
-    select(-s, -prec) %>%
-    tidyr::gather(stat,value, c(mean,sd)) %>%
-    reshape2::dcast(N+k~step+storage+stat) %>%
-    left_join(tmp, ., by=c("N","k")) %>%
-    xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
-    print(only.contents=TRUE,include.colnames=FALSE,
-          format.args=list(big.mark=","),hline.after=NULL)
+## ----echo=FALSE, fig.height=4----------------------------------------------
+fig2 <- filter(tab2, time=="mean_ms" & N <= 200) %>%
+    gather(pattern, value, dense_cov:sparse_prec) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+    + geom_line() %>%
+    + geom_point() %>%
+    + scale_x_continuous("Number of blocks (N)") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
+    + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
+fig2
 
