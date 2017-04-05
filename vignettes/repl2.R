@@ -101,7 +101,7 @@ tab1 <- filter(runtimes, stat %in% c("chol","solve")) %>%
     summarize(mean_ms=mean(time/1000000),
               sd_ms=sd(time/1000000)) %>%
     gather(time, value, c(mean_ms, sd_ms)) %>%
-    dcast(N+k+stat+time~pattern)
+    dcast(N+k+time~stat+pattern)
 
 
 tab2 <- filter(runtimes, stat %in% c("density","rand")) %>%
@@ -112,13 +112,26 @@ tab2 <- filter(runtimes, stat %in% c("density","rand")) %>%
     dcast(N+k+stat+time~pattern+type)
 
 theme_set(theme_bw())
-fig2 <- filter(tab2, time=="mean_ms") %>%
-    gather(pattern, value, dense_:sparse_prec) %>%
+
+fig1 <- filter(tab1, time=="mean_ms") %>%
+    gather(pattern, value, chol_dense:solve_dense) %>%
     ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
     + geom_line() %>%
     + geom_point() %>%
-    + scale_x_continuous("Number of heterogeneous units", labels=comma) %>%
-    + scale_y_continuous("Computation time (milliseconds)", labels=comma) %>%
+    + scale_x_continuous("Number of heterogeneous units") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
+    + facet_grid(.~k, scales="free_y")
+fig1
+
+
+
+fig2 <- filter(tab2, time=="mean_ms" & N <= 200) %>%
+    gather(pattern, value, dense_cov:sparse_prec) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+    + geom_line() %>%
+    + geom_point() %>%
+    + scale_x_continuous("Number of heterogeneous units") %>%
+    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
     + facet_grid(stat~k, scales="free_y")
 fig2
 
