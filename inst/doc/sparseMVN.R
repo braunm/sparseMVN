@@ -34,13 +34,13 @@ nnz2 <- Q*k^2 + 2*p*Q*k + p^2
 nnz2LT <- Q*k*(k+1)/2 + p*Q*k + p*(p+1)/2
 options(scipen=999)
 
-## ----blockarrow, echo=FALSE, prompt=FALSE----------------------------------
+## ----blockarrow, echo=FALSE, comment=NA------------------------------------
 Mat <- as(kronecker(diag(N), matrix(1, k, k)),"sparseMatrix")
 Mat <- rBind(Mat, Matrix(1, p, N*k))
 Mat <- cBind(Mat, Matrix(1, k*N+p, p))
 printSpMatrix(as(Mat,"nMatrix"))
 
-## ----banded, echo=FALSE----------------------------------------------------
+## ----banded, echo=FALSE, comment=NA----------------------------------------
 Mat <- kronecker(Matrix(1, k, k), diag(N))
 Mat <- rBind(Mat, Matrix(1, p, N * k))
 Mat <- cBind(Mat, Matrix(1, k*N+p, p))
@@ -94,33 +94,49 @@ all.equal(logf, logf_dense)
 load("runtimes.Rdata")
 
 ## ----echo=FALSE,results='asis'---------------------------------------------
-select(cases,`$N$`=N, `$k$`=k, `$M$`=nvars, `$M^2$`=nels,
-       nnz, `nnz (LT)`=nnzLT, `\\% nnz`=pct.nnz) %>%
+tmp <- c("\\multirow{8}{*}{k=2}",rep(NA,7),
+         "\\multirow{8}{*}{k=4}",rep(NA,7))
+mutate(cases, tmp=tmp) %>%
+    select(tmp,N, nvars,nels,
+           nnz, nnzLT, pct.nnz) %>%
     xtable::xtable(digits=c(rep(0,7),3)) %>%
-    print(include.rownames=FALSE,
+    print(include.rownames=FALSE,only.contents=TRUE,
+          include.colnames=FALSE,
           floating=FALSE, sanitize.colnames.function=sanitize,
+          sanitize.text.function=sanitize,
+          hline.after=8,
           format.args=list(big.mark=","))
 
-## ----echo=FALSE,fig.height=3-----------------------------------------------
-fig1 <- filter(tab1, time=="mean_ms") %>%
-    gather(pattern, value, chol_dense:solve_dense) %>%
-    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+## ----echo=FALSE, fig.height=5----------------------------------------------
+theme_set(theme_bw())
+fig1 <- filter(tab2, time=="mean_ms") %>%
+    select(-sparse_prec) %>%
+    mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
+    rename(dense=dense_cov, sparse=sparse_cov) %>%
+    gather(pattern, value, c(dense, sparse)) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
-    + geom_point() %>%
+    + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
-theme_set(theme_bw())
+    + scale_color_manual(values=c(dense='red', sparse='blue')) %>%
+    + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
+    + theme(strip.background=element_rect(fill='white'))
 fig1
 
-## ----echo=FALSE, fig.height=4----------------------------------------------
-fig2 <- filter(tab2, time=="mean_ms" & N <= 200) %>%
-    gather(pattern, value, dense_cov:sparse_prec) %>%
-    ggplot(aes(x=N, y=value, color=pattern, shape=pattern)) %>%
+## ----echo=FALSE,fig.height=3-----------------------------------------------
+fig2 <- filter(tab1, time=="mean_ms") %>%
+    rename(`dense inversion`=solve_dense,
+           `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
+    gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
+    ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
-    + geom_point() %>%
+    + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k)))
+    + scale_color_manual(values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
+                                  `dense inversion`='black')) %>%
+    + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
+    + theme(strip.background=element_rect(fill='white'))
 fig2
 

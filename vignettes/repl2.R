@@ -137,4 +137,3 @@ fig2
 
 save(cases, runtimes, tab1, tab2, fig1, fig2, file="vignettes/runtimes.Rdata")
 
-
