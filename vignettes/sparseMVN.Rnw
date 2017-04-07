@@ -121,7 +121,7 @@ high-dimensional MVN random variables.
 However, for many applications the
 covariance or precision matrix is sparse, meaning that the proportion
 of nonzero elements is small, relative to the total size of the
-matrix. The functions in the \pkg{sparseMVN} package exploits that
+matrix. The functions in the \pkg{sparseMVN} package exploit that
 sparsity to reduce memory requirements, and to gain computational
 efficiencies.  The \func{dmvn.sparse} function computes the MVN
 density, and the \func{rmvn.sparse} function samples from an MVN
@@ -132,7 +132,7 @@ covariance or precision matrix in a compressed sparse format. This
 approach has several advantages:
 
 \begin{enumerate}
-\item Memory requirements are lower because only the nonzero
+\item Memory requirements are smaller because only the nonzero
   elements of the matrix are stored in a compressed sparse format.
 \item Linear algebra algorithms that are optimzed for sparse matrices
   are more efficient because they avoid operations on matrix elements that are known to be zero.
@@ -236,7 +236,7 @@ requirement for $\Sigma$ (or $\Sigma^{-1}$) grows quadratically with $M$.
 
 The \pkg{Matrix} package \citep{R_Matrix} defines
 various classes for storing sparse matrices in compressed formats. The
-most important one for our purposes is a
+most important class for our purposes is
 \class{dsCMatrix}, which defines a symmetric matrix, with numeric
 (double precision) elements, in a column-compressed format.  Three
 vectors define the underlying matrix:

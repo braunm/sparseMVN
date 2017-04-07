@@ -14,7 +14,7 @@ registerDoParallel(cores=cores)
 
 build_mat <- function(N, k) {
     t1 <- exp(rnorm(k*k))
-    Q1 <- tril(kronecker(Matrix(t1,k,k),diag(N)))
+    Q1 <- tril(kronecker(diag(N),Matrix(t1,k,k)))
     Q2 <- cBind(Q1,Matrix(0, N*k, k))
     Q3 <- rBind(Q2,cBind(Matrix(rnorm(N*k*k), k, N*k), Diagonal(k)))
     tcrossprod(Q3)
