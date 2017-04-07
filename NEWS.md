@@ -1,6 +1,6 @@
 # NEWS file for sparseMVN package
 
-## VERSION 0.2.0.9990 (development)
+## VERSION 0.2.0.1 (development)
 
 * New vignette.
 
