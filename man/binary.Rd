@@ -22,7 +22,7 @@ elements are heterogeneous coefficients. The remaining k elements are population
 
 \item{data}{Named list of data matrices Y and X, and choice count integer T}
 
-\item{priors}{Named list of matrices inv.Omega and inv.Sigma}
+\item{priors}{Named list of matrices inv.Omega and inv.A.}
 
 \item{order.row}{Determines order of heterogeneous coefficients in
 parameter vector. If TRUE, heterogeneous coefficients are ordered by unit.  If FALSE, they are ordered by covariate.}
@@ -43,4 +43,3 @@ Functions for binary choice example in the vignette.
 These functions are used by the heterogeneous binary
 choice example in the vignette. There are N heterogeneous units, each making T binary choices.  The choice probabilities depend on k covariates.  binary.sim simulates a dataset suitable for running the example.
 }
-

@@ -70,14 +70,15 @@ matrices to speed up multivariate normal simpulation and density computation.
 \begin{document}
 
 <<echo=FALSE, cache=FALSE>>=
-suppressPackageStartupMessages(library(Matrix))
-suppressPackageStartupMessages(library(mvtnorm))
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(scales))
-suppressPackageStartupMessages(library(trustOptim))
-suppressPackageStartupMessages(library(xtable))
-suppressPackageStartupMessages(library(tidyr))
-suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library("sparseMVN"))
+suppressPackageStartupMessages(library("Matrix"))
+suppressPackageStartupMessages(library("mvtnorm"))
+suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("scales"))
+suppressPackageStartupMessages(library("trustOptim"))
+suppressPackageStartupMessages(library("xtable"))
+suppressPackageStartupMessages(library("tidyr"))
+suppressPackageStartupMessages(library("ggplot2"))
 
 knitr::render_sweave()
 knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
@@ -518,22 +519,31 @@ logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
 all.equal(logf, logf_dense)
 @
 
-\section{Timing}
-
 <<echo=FALSE>>=
 load("runtimes.Rdata")
 @
 
+<<echo=FALSE>>=
+tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
+    group_by(N, k, stat, pattern, type) %>%
+    summarize(mean_ms=mean(time/1000000),
+              sd_ms=sd(time/1000000)) %>%
+    gather(time, value, c(mean_ms, sd_ms)) %>%
+    dcast(N+k+stat+time~pattern+type)
 
 
-% <<echo=FALSE>>=
-% RT <- group_by(runtimes,s, N, k, prec, bench.expr) %>%
-%     summarize(mean = mean(bench.time/10^6),
-%               sd = sd(bench.time/10^6)) %>%
-%     ungroup() %>%
-%     tidyr::separate(bench.expr, c("step", "storage"), sep="_")
-% @
+tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
+    group_by(N, k, stat, pattern, type) %>%
+    summarize(mean_ms=mean(time/1000000),
+              sd_ms=sd(time/1000000)) %>%
+    gather(time, value, c(mean_ms, sd_ms)) %>%
+    dcast(N+k+time~stat+pattern)
+@
 
+
+
+
+\section{Timing}
 
 In this section we show the efficiency gains from \pkg{sparseMVN} by comparing the run times between \func{rmvn.sparse} and
 \func{rmvnorm}, and between \func{dmvn.sparse} and
@@ -582,29 +592,19 @@ mutate(cases, tmp=tmp) %>%
 
 
 
-% <<echo=FALSE>>=
-% tmp <- filter(cases, prec) %>%
-%     select(N,k,nvars,nnz)
-% tim1 <- filter(RT, step %in% c("rand","density")) %>%
-%     mutate(type=ifelse(prec,"cov","prec")) %>%
-%     select(-s, -prec) %>%
-%     tidyr::gather(stat,value, c(mean,sd)) %>%
-%     reshape2::dcast(type+N+k~step+storage+stat) %>%
-%     left_join(tmp, ., by=c("N","k"))
-% @
 
 Figure~\ref{fig:densRand} compares mean run times to compute 1,000 MVN densities, and generate 1,000
 MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
   \func{dmvn.sparse}) and \pkg{mvtnorm} (\func{rmvnorm},
-  \func{dmvnorm}).  Times were collected over 300 replications on a
+  \func{dmvnorm}).  Times were collected over 200 replications on a
   2013-vintage Mac Pro with a 12-core 2.7 GHz Intel Xeon E5 processor
   and 64 GB of RAM.
   The times for \pkg{mvtnorm} are faster than
   \pkg{sparseMVN} for low dimensional cases ($N\leq 50$), but grow
   quadratically in the number of blocks.\footnote{As an example, in
     the $N=10$, $k=2$ case, the mean time to compute 1,000 MVN
-    densities is just over one millisecond using \func{dmvnorm}, but more
-    than four milliseconds using \func{dmvn.sparse}.}  This is because the number
+    densities is just over 1 ms using \func{dmvnorm}, but more
+    than 4 ms using \func{dmvn.sparse}.}  This is because the number
   of elements stored in a dense covariance matrix grows quadratically
   with the number of variables, even though the number of
   \emph{nonzero} elements grows linearly.  In this example,
@@ -618,8 +618,7 @@ MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
 \begin{figure}[tb]
 <<echo=FALSE, fig.height=5>>=
 theme_set(theme_bw())
-fig1 <- filter(tab2, time=="mean_ms") %>%
-    select(-sparse_prec) %>%
+fig1 <- filter(tab1, time=="mean_ms") %>%
     mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
     rename(dense=dense_cov, sparse=sparse_cov) %>%
     gather(pattern, value, c(dense, sparse)) %>%
@@ -636,7 +635,7 @@ fig1 <- filter(tab2, time=="mean_ms") %>%
 fig1
 @
 \caption{Mean computation time for simulating 1,000 MVN samples, and
-  computing 1,000 MVN densities, averaged over 300 replications.
+  computing 1,000 MVN densities, averaged over 200 replications.
   Densities were computed using \func{dmvnorm} and
   \func{dmvn.sparse}, while random samples were generated using
   \func{rmvnorm} and \func{rmvn.sparse}.}\label{fig:densRand}
@@ -656,11 +655,11 @@ a substantial part of the computation time.  The decomposition and
 inversion operations on the dense matrices grow cubically as the size of
 the matrix increases.  The sparse Cholesky decomposition time is
 negligible. For example, the mean run time for the $N=500$,
-$k=4$ case is about 0.39 milliseconds.
+$k=4$ case is about 0.39 ms.
 
 \begin{figure}[tb]
 <<echo=FALSE,fig.height=3>>=
-fig2 <- filter(tab1, time=="mean_ms") %>%
+fig2 <- filter(tab2, time=="mean_ms") %>%
     rename(`dense inversion`=solve_dense,
            `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
     gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%

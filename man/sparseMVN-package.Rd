@@ -3,8 +3,8 @@
 \docType{package}
 \encoding{UTF-8}
 \name{sparseMVN-package}
-\alias{sparseMVN}
 \alias{sparseMVN-package}
+\alias{sparseMVN}
 \title{Multivariate Normal Functions for Sparse Covariate and Precision Matrices}
 \description{
 MVN functions for sparse covariance and precision matrices.
@@ -18,4 +18,3 @@ directly, rather than convert it to a covariance via matrix
 inversion.
 }
 \keyword{package}
-
