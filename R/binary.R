@@ -11,7 +11,7 @@
 #' @param P Numeric vector of length \eqn{(N+1)k}.  First \eqn{Nk}
 #' elements are heterogeneous coefficients. The remaining k elements are population parameters.
 #' @param data Named list of data matrices Y and X, and choice count integer T
-#' @param priors Named list of matrices inv.Omega and inv.Sigma
+#' @param priors Named list of matrices inv.Omega and inv.A.
 #' @param order.row Determines order of heterogeneous coefficients in
 #' parameter vector. If TRUE, heterogeneous coefficients are ordered by unit.  If FALSE, they are ordered by covariate.
 #' @return For binary.f, binary.df and binary.hess, the log posterior density, gradient and Hessian, respectively. The Hessian is a dgCMatrix object. binary.sim returns a list with simulated Y and X, and the input T.
@@ -31,16 +31,16 @@ binary.f <- function(P, data, priors, order.row=FALSE) {
     ## can't use log1p if P is complex
     log.p <- bx - log(1+exp(bx))
     log.p1 <- -log(1+exp(bx))
-   
+
     data.LL <- sum(data$Y*log.p + (data$T-data$Y)*log.p1)
 
     Bmu <- apply(beta, 2, "-", mu)
 
-    prior <- -0.5 * sum(diag(tcrossprod(Bmu) %*% priors$inv.Sigma))
+    prior <- -0.5 * sum(diag(tcrossprod(Bmu) %*% priors$inv.A))
     hyp <- -0.5 * t(mu) %*% priors$inv.Omega %*% mu
     res <- data.LL + prior + hyp
-    if(is.complex(P)) return(as.complex(res)) else return(as.numeric(res))  
-   
+    if(is.complex(P)) return(as.complex(res)) else return(as.numeric(res))
+
 }
 
 #' @rdname binary
@@ -50,11 +50,11 @@ binary.grad <- function(P, data, priors, order.row=FALSE) {
     Y <- data$Y
     X <- data$X
     T <- data$T
-    inv.Sigma <- priors$inv.Sigma
+    inv.A <- priors$inv.A
     inv.Omega <- priors$inv.Omega
 
-  q1 <- .dlog.f.db(P, Y, X, T, inv.Omega, inv.Sigma, order.row=order.row)
-  q2 <- .dlog.f.dmu(P, Y, X, T, inv.Omega, inv.Sigma, order.row=order.row)
+  q1 <- .dlog.f.db(P, Y, X, T, inv.Omega, inv.A, order.row=order.row)
+  q2 <- .dlog.f.dmu(P, Y, X, T, inv.Omega, inv.A, order.row=order.row)
   res <- c(q1, q2)
   return(res)
 }
@@ -66,12 +66,12 @@ binary.hess <- function(P, data, priors, order.row=FALSE) {
     Y <- data$Y
     X <- data$X
     T <- data$T
-    inv.Sigma <- priors$inv.Sigma
+    inv.A <- priors$inv.A
     inv.Omega <- priors$inv.Omega
     N <- length(Y)
     k <- NROW(X)
 
-    SX <- Matrix(inv.Sigma)
+    SX <- Matrix(inv.A)
     XO <- Matrix(inv.Omega)
     B1 <- .d2.db(P, Y, X, T, SX, order.row)
 
@@ -122,7 +122,7 @@ binary.sim <- function(N, k, T) {
 
 
 
-.dlog.f.db <- function(P, Y, X, T, inv.Omega, inv.Sigma, order.row) {
+.dlog.f.db <- function(P, Y, X, T, inv.Omega, inv.A, order.row) {
 
     N <- length(Y)
     k <- NROW(X)
@@ -139,7 +139,7 @@ binary.sim <- function(N, k, T) {
     dLL.db <- apply(X,1,"*",tmp)
 
     Bmu <- apply(beta, 2, "-", mu)
-    dprior <- -inv.Sigma %*% Bmu
+    dprior <- -inv.A %*% Bmu
 
     res <- t(dLL.db) + dprior
     if (order.row) res <- t(res)
@@ -148,7 +148,7 @@ binary.sim <- function(N, k, T) {
 
 }
 
-.dlog.f.dmu <- function(P, Y, X, T, inv.Omega, inv.Sigma, order.row) {
+.dlog.f.dmu <- function(P, Y, X, T, inv.Omega, inv.A, order.row) {
 
     N <- length(Y)
     k <- NROW(X)
@@ -157,11 +157,11 @@ binary.sim <- function(N, k, T) {
     mu <- P[(N*k+1):length(P)]
     Bmu <- apply(beta, 2, "-", mu)
 
-    res <- inv.Sigma %*% (rowSums(Bmu)) -  inv.Omega %*% mu
+    res <- inv.A %*% (rowSums(Bmu)) -  inv.Omega %*% mu
     return(res)
 }
 
-.d2.db <- function(P, Y, X, T, inv.Sigma, order.row) {
+.d2.db <- function(P, Y, X, T, inv.A, order.row) {
 
     N <- length(Y)
     k <- NROW(X)
@@ -174,18 +174,18 @@ binary.sim <- function(N, k, T) {
 
     q <- vector("list",length=N)
     for (i in 1:N) {
-        q[[i]] <- -T*p[i]*(1-p[i])*tcrossprod(X[,i]) - inv.Sigma
+        q[[i]] <- -T*p[i]*(1-p[i])*tcrossprod(X[,i]) - inv.A
     }
     B <- bdiag(q)
     return(B)
 }
 
-.d2.dmu <- function(N, inv.Sigma, inv.Omega) {
-  return(-N*inv.Sigma-inv.Omega)
+.d2.dmu <- function(N, inv.A, inv.Omega) {
+  return(-N*inv.A-inv.Omega)
 }
 
-.d2.cross <- function(N, inv.Sigma) {
-  res <- kronecker(matrix(rep(1,N),nrow=1),inv.Sigma)
+.d2.cross <- function(N, inv.A) {
+  res <- kronecker(matrix(rep(1,N),nrow=1),inv.A)
   return(res)
 }
 

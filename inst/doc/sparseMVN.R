@@ -17,9 +17,6 @@ options(replace.assign=TRUE, width=77, prompt="R> ",
 sanitize <- function(x) x
 
 ## ----echo=FALSE------------------------------------------------------------
-require(sparseMVN)
-require(Matrix)
-require(mvtnorm)
 N <- 5
 k <- 2
 p <- k ## dimension of mu
@@ -59,15 +56,14 @@ A2 <- as(Mat2,"matrix")
 #  dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
 
 ## ----results='hide'--------------------------------------------------------
-D <- binary.sim(N=50, k=2, T=50)
-priors <- list(inv.Sigma=diag(2), inv.Omega=diag(2))
+D <- sparseMVN::binary.sim(N=50, k=2, T=50)
+priors <- list(inv.A=diag(2), inv.Omega=diag(2))
 start <- rep(c(-1,1),51)
 opt <- trust.optim(start,
                    fn=sparseMVN::binary.f,
                    gr=sparseMVN::binary.grad,
                    hs=sparseMVN::binary.hess,
-                   data=D, priors=list(inv.Sigma=diag(2),
-                                       inv.Omega=diag(2)),
+                   data=D, priors=priors,
                    method="Sparse",
                    control=list(function.scale.factor=-1))
 
@@ -76,9 +72,10 @@ R <- 100
 pm <- opt[["solution"]]
 H <- -opt[["hessian"]]
 CH <- Cholesky(H)
-samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
+
 
 ## --------------------------------------------------------------------------
+samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
 logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
 
 ## --------------------------------------------------------------------------
