@@ -116,7 +116,9 @@ fig1 <- filter(tab2, time=="mean_ms") %>%
     + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual(values=c(dense='red', sparse='blue')) %>%
+    + scale_color_manual("Pattern",values=c(dense='red', sparse='blue')) %>%
+    + scale_shape("Pattern") %>%
+    + scale_linetype("Pattern") %>%
     + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
     + theme(strip.background=element_rect(fill='white'))
 fig1
@@ -131,8 +133,11 @@ fig2 <- filter(tab1, time=="mean_ms") %>%
     + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual(values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
+    + scale_color_manual("Pattern/Operation",
+                         values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
                                   `dense inversion`='black')) %>%
+    + scale_shape("Pattern/Operation") %>%
+    + scale_linetype("Pattern/Operation") %>%
     + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
     + theme(strip.background=element_rect(fill='white'))
 fig2

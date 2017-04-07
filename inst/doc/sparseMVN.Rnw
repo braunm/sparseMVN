@@ -539,11 +539,11 @@ In this section we show the efficiency gains from \pkg{sparseMVN} by comparing t
 \func{rmvnorm}, and between \func{dmvn.sparse} and
 \func{dmvnorm}.  In these tests, we construct covariance/precision
 matrices with the same structure as the Hessian of the log posterior
-density of the model in Section \ref{sec:example}.  Parameters are
+density of the example model in Section \ref{sec:example}.  Parameters are
 ordered such that the matrix has a block-arrow pattern, as in
 Figure~\ref{fig:blockarrow}.  The size and sparsity of the test matrices
 vary through manipulation of the number of blocks ($N$), the size of
-each block, and the number of rows/columns in the margin (both $k$).  Each test matrix has
+each block ($k$), and the number of rows/columns in the margin (also $k$).  Each test matrix has
 $(N+1)k$ rows and columns.  Table~\ref{tab:cases} summarizes the case
 conditions.
 
@@ -593,27 +593,27 @@ mutate(cases, tmp=tmp) %>%
 %     left_join(tmp, ., by=c("N","k"))
 % @
 
-Figure~\ref{fig:densRand} compares run times (milliseconds), averaged across
-300 replications, to compute 1,000 MVN densities, and generate 1,000
-MVN samples, using \pkg{sparseMVN} (\func{rmvn.sparse},
-  \func{dmvn.sparse}) and \pkg{mvtnorm} (\func{rmvnorm}, \func{dmvnorm})
-  functions.  The times for \pkg{mvtnorm} are faster than
+Figure~\ref{fig:densRand} compares mean run times to compute 1,000 MVN densities, and generate 1,000
+MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
+  \func{dmvn.sparse}) and \pkg{mvtnorm} (\func{rmvnorm},
+  \func{dmvnorm}).  Times were collected over 300 replications on a
+  2013-vintage Mac Pro with a 12-core 2.7 GHz Intel Xeon E5 processor
+  and 64 GB of RAM.
+  The times for \pkg{mvtnorm} are faster than
   \pkg{sparseMVN} for low dimensional cases ($N\leq 50$), but grow
   quadratically in the number of blocks.\footnote{As an example, in
     the $N=10$, $k=2$ case, the mean time to compute 1,000 MVN
-    densities is just over one second using \func{dmvnorm}, but more
-    than four seconds using \func{dmvn.sparse}.}  This is because the number
+    densities is just over one millisecond using \func{dmvnorm}, but more
+    than four milliseconds using \func{dmvn.sparse}.}  This is because the number
   of elements stored in a dense covariance matrix grows quadratically
   with the number of variables, even though the number of
-  \emph{nonzero} elements grows linearly.  In a sparse matrix, the
-  storage and computation requirements grow linearly with the number
+  \emph{nonzero} elements grows linearly.  In this example,
+  storage and computation requirements for the sparse matrix grow linearly with the number
   of variables, so the \pkg{sparseMVN} run times grow linearly as
   well.  The comparative advantage of \pkg{sparseMVN} increases with
   the sparsity of the covariance matrix.\footnote{Across all cases
-    there was hardly any difference in the run times of the
-    \pkg{sparseMVN} functions when providing the precision
-    matrix instead of the covariance.}
-
+    there was hardly any difference in the \pkg{sparseMVN} run times
+    when providing the precision matrix instead of the covariance.}
 
 \begin{figure}[tb]
 <<echo=FALSE, fig.height=5>>=
@@ -628,7 +628,9 @@ fig1 <- filter(tab2, time=="mean_ms") %>%
     + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual(values=c(dense='red', sparse='blue')) %>%
+    + scale_color_manual("Pattern",values=c(dense='red', sparse='blue')) %>%
+    + scale_shape("Pattern") %>%
+    + scale_linetype("Pattern") %>%
     + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
     + theme(strip.background=element_rect(fill='white'))
 fig1
@@ -640,20 +642,20 @@ fig1
   \func{rmvnorm} and \func{rmvn.sparse}.}\label{fig:densRand}
 \end{figure}
 
-The \func{sparseMVN} functions always require a Cholesky decomposition
+The \func{sparseMVN} functions always require a sparse Cholesky decomposition
 of the covariance or precision matrix, and the \pkg{mvtnorm} functions
-require a precision matrix to be inverted into a covariance matrix.
+require a dense precision matrix to be inverted into a dense covariance matrix.
 Figure \ref{fig:cholSolve} compares the computation times of these
 preparatory steps.  There are three cases to consider:  inverting a dense matrix using the \func{solve}
 function, decomposing a sparse matrix using \func{Cholesky}, and
 decomposing a dense matrix using \func{chol}.  Applying \func{chol} to
 a dense function is not a required operation in advance of calling
 \func{rmvnorm} or \func{dmvnorm}, but those functions will invoke some
-kind of decomposition internally.  We include it because it comprises
+kind of decomposition internally.  We include it in our comparison because it comprises
 a substantial part of the computation time.  The decomposition and
-inversion operations on the dense matrices grow quickly as the size of
-the matrix increases.  The sparse Cholesky decomposition time takes
-negligible time.  For example, the mean run time for the $N=500$,
+inversion operations on the dense matrices grow cubically as the size of
+the matrix increases.  The sparse Cholesky decomposition time is
+negligible. For example, the mean run time for the $N=500$,
 $k=4$ case is about 0.39 milliseconds.
 
 \begin{figure}[tb]
@@ -667,8 +669,11 @@ fig2 <- filter(tab1, time=="mean_ms") %>%
     + geom_point(size=2) %>%
     + scale_x_continuous("Number of blocks (N)") %>%
     + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual(values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
+    + scale_color_manual("Pattern/Operation",
+                         values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
                                   `dense inversion`='black')) %>%
+    + scale_shape("Pattern/Operation") %>%
+    + scale_linetype("Pattern/Operation") %>%
     + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
     + theme(strip.background=element_rect(fill='white'))
 fig2
@@ -677,120 +682,15 @@ fig2
   dense matrices, and inversion of dense matrices.}\label{fig:cholSolve}
 \end{figure}
 
-
-
-
-% \begin{table}
-%   \begin{subtable}{\linewidth}
-%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-%     \toprule
-% &&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
-%     \cmidrule(lr){5-8}\cmidrule(lr){9-12}
-% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-%     \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-% $N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
-%     \midrule
-% <<echo=FALSE,results='asis'>>=
-% filter(tim1, type=="cov") %>%
-%     select(-type) %>%
-%     xtable(digits=c(rep(0,4),rep(0,9))) %>%
-%     print(only.contents=TRUE,include.colnames=FALSE,
-%           format.args=list(big.mark=","),hline.after=NULL)
-% @
-% \bottomrule
-% \end{tabular}
-% \caption{Starting with covariance matrix.}\label{tab:timing1cov}
-% \end{subtable}
-% \newline
-% \vspace{3ex}
-% \newline
-%  \begin{subtable}{\linewidth}
-%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-%     \toprule
-% &&&&\multicolumn{4}{c}{compute density}&\multicolumn{4}{c}{random sample}\\
-%         \cmidrule(lr){5-8}\cmidrule(lr){9-12}
-% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-%       \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-% $N$&$k$&nvars&nnz&mean&sd&mean&sd&mean&sd &mean&sd\\
-%     \midrule
-% <<echo=FALSE,results='asis'>>=
-% filter(tim1, type=="prec") %>%
-%     select(-type) %>%
-%     xtable(digits=c(rep(0,4),rep(0,9))) %>%
-%     print(only.contents=TRUE,include.colnames=FALSE,
-%           format.args=list(big.mark=","),hline.after=NULL)
-% @
-% \bottomrule
-% \end{tabular}
-% \caption{Starting with precision matrix.}\label{tab:timing1prec}
-% \end{subtable}
-% \caption{Time (milliseconds) to compute 1,000 MVN densities, and
-%   simulate 1,000 MVN samples, using sparse (\func{rmvn.sparse},
-%   \func{dmvn.sparse}) or dense (\func{rmvnorm}, \func{dmvnorm})
-%   methods, for a covariance or precision matrix with a block-arrow structure. $N$ is
-% number of blocks (heterogeneous units), and $k$ is the size of each
-% block (heterogeneous variables).  nvars and nnz are, respectively, the size of the
-% random vector, and number of nonzero elements in the
-% covariance/precision matrix. Means and standard deviations are across XX replications.}\label{tab:timing1}
-% \end{table}
-
-
-
-For cases with smaller matrices, the dense routines ran faster than
-the sparse ones.  This is because the matrices themselves are still
-somewhat dense, and the sparse linear algebra routines are not
-optimized for them.  However, as the number of blocks increases, the
-matrices become increasingly sparse, and the \func{dmvn.sparse} and
-\func{rmvn.sparse} functions run faster than their dense counterparts.
-
-
-Cholesky decompositions (both dense and sparse) and inverting matrices
-(dense only) are the most computationally intensive steps of random
-number generation and density computation.  In
-Table~\ref{tab:timing2}, we show how these times vary with the
-sparsity of the matrix.
-
-
-
-
-% \begin{table}
-%   \begin{tabular}{rrrr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr>{\bfseries}rr}
-%     \toprule
-% &&&&\multicolumn{4}{c}{Cholesky}&\multicolumn{4}{c}{invert}\\
-%     \cmidrule(lr){5-8} \cmidrule(lr){9-12}
-% &&&&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}&\multicolumn{2}{c}{dense}&\multicolumn{2}{c}{sparse}\\
-%     \cmidrule(lr){5-6}\cmidrule(lr){7-8}\cmidrule(lr){9-10}\cmidrule(lr){11-12}
-% $N$&$k$&nvars&nnz.pct&mean&sd&mean&sd &mean&sd&mean&sd\\
-%     \midrule
-% <<echo=FALSE,results='asis'>>=
-% tmp <- filter(cases, prec) %>%
-%     select(N,k,nvars,pct.nnz)
-% filter(RT, step %in% c("chol","solve") & prec) %>%
-%     select(-s, -prec) %>%
-%     tidyr::gather(stat,value, c(mean,sd)) %>%
-%     reshape2::dcast(N+k~step+storage+stat) %>%
-%     left_join(tmp, ., by=c("N","k")) %>%
-%     xtable(digits=c(rep(0,4),3,rep(1,8))) %>%
-%     print(only.contents=TRUE,include.colnames=FALSE,
-%           format.args=list(big.mark=","),hline.after=NULL)
-% @
-% \bottomrule
-% \end{tabular}
-% \caption{Time (milliseconds) for a Cholesky decompositon and matrix
-%   inversion of a sparse (\class{dsCMatrix}) or dense matrix.  Inversion was computed with
-%   the \func{solve} function. }\label{tab:timing2}
-% \end{table}
-
-
-
-
- Code to replicate Tables~\ref{tab:timing1} and \ref{tab:timing2}
+Code to replicate the data used in Figures~\ref{fig:densRand} and \ref{fig:cholSolve}
 is available as an online supplement to this paper, and in the
 \func{doc/} directory of the installed package.
 
-
-
 \section{Other packages for creating and using sparse matrices}
+
+Deriving utility from \pkg{sparseMVN} depends on being able to create
+and use sparse matrices.  This section describes briefly two other
+\proglang{R} packages that may be useful.
 
 \subsection{sparseHessianFD}
 
@@ -799,16 +699,14 @@ the log posterior density for a hierarchical model).  You have an
 \proglang{R} function that computes the value of the objective, and another
 function that computes its gradient.  You may also need the Hessian,
 either for a nonlinear optimization routine, or as the negative
-precision matrix of an MVN approximation.
+precision matrix of an MVN approximation. The derivation of the
+Hessian might be too tedious or complicated to derive it analytically,
+or too large to estimate numerically.  However, for many applications
+(e.g., a hierarchical model with conditional independence), it is easy
+to identify which elements in the Hessian are nonzero.
 
-It's hard enough to get the gradient, but the derivation of the
-Hessian might be too tedious or complicated for it to be worthwhile.
-However, it should not be too hard to identify which elements of the
-Hessian are nonzero.  If you have both the gradient, and the Hessian
-emph{pattern}, then you can use the \pkg{sparseHessianFD} package
-\citep{R_sparseHessianFD} to estimate the Hessian itself.
-
-The \pkg{sparseHessianFD} package estimates the Hessian numerically, but in a
+The \pkg{sparseHessianFD} package \citep{R_sparseHessianFD} provides
+functions to estimate the Hessian numerically, but in a
 way that exploits the fact that the Hessian is sparse, and that the
 pattern is known.  The package contains functions that return the
 Hessian as a sparse \class{dgCMatrix}.  This object can be coerced into a
@@ -822,11 +720,7 @@ that takes the Hessian as a sparse \class{dgCMatrix} object.  This optimizer
 is useful for unconstrained optimization of a high-dimensional
 objective function with a sparse Hessian.  It uses a trust region
 algorithm, which may be more stable and robust than line search
-approaches.  Also, it applies a stopping rule based on the norm of the
-gradient, as opposed to whether the algorithm makes "sufficient
-progress."  (Many optimizers, especially \func{optim} in \pkg{base} \proglang{R}, stop
-too early, before the gradient is truly flat).
-
+approaches.
 
 \section{Other}
 
