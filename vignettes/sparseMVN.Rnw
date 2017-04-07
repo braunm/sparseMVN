@@ -45,7 +45,7 @@
   with Sparse Covariance and Precision Matrices}
 \Plaintitle{sparseMVN: An R Package for Sparse MVN Functions}
 \Shorttitle{sparseMVN}
-\Keywords{multivariate normal, sparse matrices}
+\Keywords{multivariate normal, sparse matrices, covariance, simulation}
 \Address{
   Michael Braun\\
   Edwin L. Cox School of Business\\
@@ -58,12 +58,16 @@
 
 
 \Abstract{
-The sparseMVN package exploits sparsity in covariance and precision
-matrices to speed up multivariate normal simpulation and density computation.
+The number of elements in a multivariate normal (MVN) covariance or
+precision matrix grows quadratically in the number of variables.
+Thus, sampling from, and computing densities of, an MVN random variable
+is not scalable when all matrix elements are stored as a dense R matrix, but
+may be when the matrix is sparse, and stored in a suitable compressed
+format.  This package provides standard MVN sampling and density
+algorithms that are optimized for sparse covariance and precision matrices.
 }
 
-
-\date{December 26, 2016}
+\date{April 7, 2017}
 
 %% need no \usepackage{Sweave.sty}
 

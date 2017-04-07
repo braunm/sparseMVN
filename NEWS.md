@@ -2,6 +2,8 @@
 
 ## VERSION 0.2.1 (development)
 
+* New vignette.
+
 ## VERSION 0.2.0 (Feb. 5, 2015)
 
 * Major overhaul of package structure, with new
