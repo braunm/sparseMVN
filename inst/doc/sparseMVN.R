@@ -1,12 +1,10 @@
 ## ----echo=FALSE, cache=FALSE-----------------------------------------------
-suppressPackageStartupMessages(library(Matrix))
-suppressPackageStartupMessages(library(mvtnorm))
-suppressPackageStartupMessages(library(dplyr))
-suppressPackageStartupMessages(library(scales))
-suppressPackageStartupMessages(library(trustOptim))
-suppressPackageStartupMessages(library(xtable))
-suppressPackageStartupMessages(library(tidyr))
-suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library("sparseMVN"))
+suppressPackageStartupMessages(library("Matrix"))
+suppressPackageStartupMessages(library("mvtnorm"))
+suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("xtable"))
+suppressPackageStartupMessages(library("ggplot2"))
 
 knitr::render_sweave()
 knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
@@ -59,13 +57,13 @@ A2 <- as(Mat2,"matrix")
 D <- sparseMVN::binary.sim(N=50, k=2, T=50)
 priors <- list(inv.A=diag(2), inv.Omega=diag(2))
 start <- rep(c(-1,1),51)
-opt <- trust.optim(start,
-                   fn=sparseMVN::binary.f,
-                   gr=sparseMVN::binary.grad,
-                   hs=sparseMVN::binary.hess,
-                   data=D, priors=priors,
-                   method="Sparse",
-                   control=list(function.scale.factor=-1))
+opt <- trustOptim::trust.optim(start,
+                               fn=sparseMVN::binary.f,
+                               gr=sparseMVN::binary.grad,
+                               hs=sparseMVN::binary.hess,
+                               data=D, priors=priors,
+                               method="Sparse",
+                               control=list(function.scale.factor=-1))
 
 ## --------------------------------------------------------------------------
 R <- 100
@@ -90,6 +88,22 @@ all.equal(logf, logf_dense)
 ## ----echo=FALSE------------------------------------------------------------
 load("runtimes.Rdata")
 
+## ----echo=FALSE------------------------------------------------------------
+tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
+    group_by(N, k, stat, pattern, type) %>%
+    summarize(mean_ms=mean(time/1000000),
+              sd_ms=sd(time/1000000)) %>%
+    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
+    reshape2::dcast(N+k+stat+time~pattern+type)
+
+
+tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
+    group_by(N, k, stat, pattern, type) %>%
+    summarize(mean_ms=mean(time/1000000),
+              sd_ms=sd(time/1000000)) %>%
+    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
+    reshape2::dcast(N+k+time~stat+pattern)
+
 ## ----echo=FALSE,results='asis'---------------------------------------------
 tmp <- c("\\multirow{8}{*}{k=2}",rep(NA,7),
          "\\multirow{8}{*}{k=4}",rep(NA,7))
@@ -104,13 +118,17 @@ mutate(cases, tmp=tmp) %>%
           hline.after=8,
           format.args=list(big.mark=","))
 
+## --------------------------------------------------------------------------
+tmp <- filter(tab1, N==min(tab1[['N']]) & k==min(tab1[['k']])
+              & time=="mean_ms" & stat=="density")
+sm <- with(tmp, c(dense_cov,sparse_cov))
+
 ## ----echo=FALSE, fig.height=5----------------------------------------------
 theme_set(theme_bw())
-fig1 <- filter(tab2, time=="mean_ms") %>%
-    select(-sparse_prec) %>%
+fig1 <- filter(tab1, time=="mean_ms") %>%
     mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
     rename(dense=dense_cov, sparse=sparse_cov) %>%
-    gather(pattern, value, c(dense, sparse)) %>%
+    tidyr::gather(pattern, value, c(dense, sparse)) %>%
     ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
     + geom_point(size=2) %>%
@@ -124,10 +142,10 @@ fig1 <- filter(tab2, time=="mean_ms") %>%
 fig1
 
 ## ----echo=FALSE,fig.height=3-----------------------------------------------
-fig2 <- filter(tab1, time=="mean_ms") %>%
+fig2 <- filter(tab2, time=="mean_ms") %>%
     rename(`dense inversion`=solve_dense,
            `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
-    gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
+    tidyr::gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
     ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
     + geom_point(size=2) %>%

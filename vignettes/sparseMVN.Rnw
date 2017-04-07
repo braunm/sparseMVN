@@ -74,10 +74,7 @@ suppressPackageStartupMessages(library("sparseMVN"))
 suppressPackageStartupMessages(library("Matrix"))
 suppressPackageStartupMessages(library("mvtnorm"))
 suppressPackageStartupMessages(library("dplyr"))
-suppressPackageStartupMessages(library("scales"))
-suppressPackageStartupMessages(library("trustOptim"))
 suppressPackageStartupMessages(library("xtable"))
-suppressPackageStartupMessages(library("tidyr"))
 suppressPackageStartupMessages(library("ggplot2"))
 
 knitr::render_sweave()
@@ -157,8 +154,18 @@ format, the \pkg{sparseMVN} functions behave
 in much the same way as the corresponding \pkg{mvtnorm} functions.
 Internally, \pkg{sparseMVN} uses
 standard methods of computing the MVN density and simulating MVN
-random variables (see Section \ref{sec:algorithms}), except that sparse-optimized
-algorithms from the \pkg{Matrix} package are used for linear algebra operations.
+random variables (see Section \ref{sec:algorithms}).  Since a large
+proportion of elements in the matrix are zero, we need
+to store only the row and column indices, and the values, of the
+unique nonzero elements.  The efficiency gains in \pkg{sparseMVN} come from
+storing the covariance or precision matrix in a compressed format without
+explicit zeros, and applying linear algebra routines that are
+optimized for those sparse matrix structures.  The \pkg{Matrix}
+package calls sparse linear algebra routines that are implemented in
+the \pkg{CHOLMOD} library
+\citep{ChenDavis2008,DavisHager1999,DavisHager2009}.
+
+
 
 \section{Background}
 Let $x\in\Real{M}$ be a realization of random variable
@@ -332,7 +339,7 @@ at the end.
 \beta_{11},\dotsc,\beta_{1k},\beta_{21},\dotsc,\beta_{2k},~\dotsc~,\beta_{N1},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k
 \end{align}
 In this case, the Hessian has a ``block-arrow'' pattern.  Figure
-\ref{fig:blockarrow} illustrates this pattern for $N=\Sexpr{comma(N)}$
+\ref{fig:blockarrow} illustrates this pattern for $N=\Sexpr{scales::comma(N)}$
 and $k=\Sexpr{k}$ (\Sexpr{nv1} total
 variables).
 
@@ -383,10 +390,10 @@ matrices, the reduction in memory requirements by storing the matrix
 in a sparse format can be substantial.\footnote{Because sparse matrix
   structures store row and column indices of the nonzero values, they
   may use more memory than dense storage if the total number of
-  elements is small}. If $N=$\Sexpr{comma(Q)}, then
-$M=$\Sexpr{comma(nv2)}, with more than $\Sexpr{floor(nels2/10^6)}$ million
-elements in the Hessian.  However, only \Sexpr{comma(nnz2)} of those elements are
-nonzero, with \Sexpr{comma(nnz2LT)} unique values in the lower
+  elements is small}. If $N=$\Sexpr{scales::comma(Q)}, then
+$M=$\Sexpr{scales::comma(nv2)}, with more than $\Sexpr{floor(nels2/10^6)}$ million
+elements in the Hessian.  However, only \Sexpr{scales::comma(nnz2)} of those elements are
+nonzero, with \Sexpr{scales::comma(nnz2LT)} unique values in the lower
 triangle.  The dense
 matrix requires \Sexpr{format(object.size(A2),units='Mb')} of RAM,
 while a sparse symmetric matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(Mat2),units='Kb')}.
@@ -470,13 +477,13 @@ function using a sparse Hessian.
 D <- sparseMVN::binary.sim(N=50, k=2, T=50)
 priors <- list(inv.A=diag(2), inv.Omega=diag(2))
 start <- rep(c(-1,1),51)
-opt <- trust.optim(start,
-                   fn=sparseMVN::binary.f,
-                   gr=sparseMVN::binary.grad,
-                   hs=sparseMVN::binary.hess,
-                   data=D, priors=priors,
-                   method="Sparse",
-                   control=list(function.scale.factor=-1))
+opt <- trustOptim::trust.optim(start,
+                               fn=sparseMVN::binary.f,
+                               gr=sparseMVN::binary.grad,
+                               hs=sparseMVN::binary.hess,
+                               data=D, priors=priors,
+                               method="Sparse",
+                               control=list(function.scale.factor=-1))
 @
 
 The call to \func{trust.optim} returns the posterior mode, and the
@@ -503,7 +510,7 @@ it to a covariance matrix, is a valuable feature of \pkg{sparseMVN}.
 This is because the inverse of a sparse matrix is not necessarily
 sparse. In the following chunk, we invert the Hessian, and drop zero
 values to maintain any remaining sparseness. Note that there are
-\Sexpr{comma(102^2)} total elements in the Hessian.
+\Sexpr{scales::comma(102^2)} total elements in the Hessian.
 
 <<>>=
 Matrix::nnzero(H)
@@ -528,16 +535,16 @@ tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
     group_by(N, k, stat, pattern, type) %>%
     summarize(mean_ms=mean(time/1000000),
               sd_ms=sd(time/1000000)) %>%
-    gather(time, value, c(mean_ms, sd_ms)) %>%
-    dcast(N+k+stat+time~pattern+type)
+    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
+    reshape2::dcast(N+k+stat+time~pattern+type)
 
 
 tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
     group_by(N, k, stat, pattern, type) %>%
     summarize(mean_ms=mean(time/1000000),
               sd_ms=sd(time/1000000)) %>%
-    gather(time, value, c(mean_ms, sd_ms)) %>%
-    dcast(N+k+time~stat+pattern)
+    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
+    reshape2::dcast(N+k+time~stat+pattern)
 @
 
 
@@ -590,7 +597,11 @@ mutate(cases, tmp=tmp) %>%
   sparsity (proportion of matrix elements that are nonzero).}\label{tab:cases}
 \end{table}
 
-
+<<>>=
+tmp <- filter(tab1, N==min(tab1[['N']]) & k==min(tab1[['k']])
+              & time=="mean_ms" & stat=="density")
+sm <- with(tmp, c(dense_cov,sparse_cov))
+@
 
 
 Figure~\ref{fig:densRand} compares mean run times to compute 1,000 MVN densities, and generate 1,000
@@ -601,16 +612,15 @@ MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
   and 64 GB of RAM.
   The times for \pkg{mvtnorm} are faster than
   \pkg{sparseMVN} for low dimensional cases ($N\leq 50$), but grow
-  quadratically in the number of blocks.\footnote{As an example, in
-    the $N=10$, $k=2$ case, the mean time to compute 1,000 MVN
-    densities is just over 1 ms using \func{dmvnorm}, but more
-    than 4 ms using \func{dmvn.sparse}.}  This is because the number
+  quadratically in the number of variables.\footnote{As an example, in
+    the $N=\Sexpr{min(tab1[['N']])}$, $k=\Sexpr{min(tab1[['k']])}$ case, the mean time to compute 1,000 MVN
+    densities is \Sexpr{format(sm[1],digits=2)} ms using \func{dmvnorm}, but more
+    than \Sexpr{format(sm[2],digits=2)} ms using \func{dmvn.sparse}.}  This is because the number
   of elements stored in a dense covariance matrix grows quadratically
-  with the number of variables, even though the number of
-  \emph{nonzero} elements grows linearly.  In this example,
+  with the number of variables. In this example,
   storage and computation requirements for the sparse matrix grow linearly with the number
   of variables, so the \pkg{sparseMVN} run times grow linearly as
-  well.  The comparative advantage of \pkg{sparseMVN} increases with
+  well \citep[sec.~4]{BraunDamien2016}.  The comparative advantage of \pkg{sparseMVN} increases with
   the sparsity of the covariance matrix.\footnote{Across all cases
     there was hardly any difference in the \pkg{sparseMVN} run times
     when providing the precision matrix instead of the covariance.}
@@ -621,7 +631,7 @@ theme_set(theme_bw())
 fig1 <- filter(tab1, time=="mean_ms") %>%
     mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
     rename(dense=dense_cov, sparse=sparse_cov) %>%
-    gather(pattern, value, c(dense, sparse)) %>%
+    tidyr::gather(pattern, value, c(dense, sparse)) %>%
     ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
     + geom_point(size=2) %>%
@@ -662,7 +672,7 @@ $k=4$ case is about 0.39 ms.
 fig2 <- filter(tab2, time=="mean_ms") %>%
     rename(`dense inversion`=solve_dense,
            `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
-    gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
+    tidyr::gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
     ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
     + geom_line() %>%
     + geom_point(size=2) %>%
@@ -721,63 +731,7 @@ objective function with a sparse Hessian.  It uses a trust region
 algorithm, which may be more stable and robust than line search
 approaches.
 
-\section{Other}
 
-Since a large proportion of elements in the matrix are zero, we need
-to store only the row and column indices, and the values, of the
-unique nonzero elements.  The efficiency gains in \pkg{sparseMVN} come from
-storing the covariance or precision matrix in a compressed format without
-explicit zeros, and applying linear algebra routines that are
-optimized for those sparse matrix structures.  The \pkg{Matrix}
-package calls sparse linear algebra routines that are implemented in
-the \pkg{CHOLMOD} library
-\citep{ChenDavis2008,DavisHager1999,DavisHager2009}; more information
-about these routines is available there.
-
-
-
-
-The exact amount of time and memory that are saved by saving the
-covariance/precision matrix in a sparse format depends on the sparsity
-pattern.  But for the hierarchical model example from earlier in this
-section, the number of nonzero elements grows only linearly with
-$N$.  The result is that all of the steps of sampling from an MVN also
-grow linearly with $N$.  Section 4 of \citet{BraunDamien2016} explains why this is so.
-
-
-
-\begin{enumerate}
-\item Each call to the function involves a new matrix factorization
-  step.  This can be costly for applications in which $x$ or $\mu$
-  changes from call to call, but $\Sigma$ does not.
-\item In some applications, the precision matrix $\Sigma^{-1}$, and
-    not the covariance matrix $\Sigma$, is readily available (e.g.,
-    estimating the asymptotic covariance from the inverse of a Hessian
-    of a maximum likelihood estimator). To use the \pkg{mvtnorm}
-    functions, $\Sigma^{-1}$ would first have to be inverted explicitly.
-  \item The \pkg{mvtnorm} functions treat $\Sigma$ as if it were
-    dense, even if there is a large proportion of structural zeros.
-\end{enumerate}
-
-The \pkg{sparseMVN} package addresses these limitations.
-\begin{enumerate}
-\item The \func{rmvn.sparse} and \func{dmvn.sparse} functions take as
-  their matrix argument a sparse Cholesky decomposition. The user does
-  need to do this explicitly beforehand, but once it is done, it does
-  not have to be done again.
-\item Both functions include an argument to identify
-  the sparse Cholesky decomposition as a factor of a covariance matrix
-  (\funcarg{prec=FALSE}) or precision matrix (\funcarg{prec=TRUE}).
-\end{enumerate}
-
-Even when either $\Sigma$ or $\Sigma^{-1}$ are dense, there may be
-advantages to using \pkg{sparseMVN} instead of \pkg{mvtnorm}.  For
-example, if the user were starting with a large, dense precision
-matrix $\Sigma^{-1}$, and computing MVN densities repeatedly, it may
-take less time to compute the Cholesky decomposition of $\Sigma^{-1]}$ once, than to
-invert it and have the \pkg{mvtnorm} functions decompose $\Sigma$ over
-and over.  Nevertheless, the main purpose of \pkg{sparseMVN} is to
-exploit sparsity in either $\Sigma$ or $\Sigma^{-1}$ when it exists.
 
 \FloatBarrier
 \bibliography{sparseMVN}

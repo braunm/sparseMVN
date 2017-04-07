@@ -24,5 +24,6 @@ vignettes/cache
 vignettes/\_region\_.*
 ^revdep/*
 ^cache/*
+inst/doc/\.install.extras
 
 
