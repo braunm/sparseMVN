@@ -118,7 +118,7 @@ mutate(cases, tmp=tmp) %>%
           hline.after=8,
           format.args=list(big.mark=","))
 
-## --------------------------------------------------------------------------
+## ----echo=FALSE------------------------------------------------------------
 tmp <- filter(tab1, N==min(tab1[['N']]) & k==min(tab1[['k']])
               & time=="mean_ms" & stat=="density")
 sm <- with(tmp, c(dense_cov,sparse_cov))
