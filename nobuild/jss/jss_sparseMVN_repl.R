@@ -8,9 +8,6 @@ library("stringr")
 library("reshape2")
 set.seed(123)
 
-library(doParallel)
-cores <- 10
-registerDoParallel(cores=cores)
 
 build_mat <- function(N, k) {
     t1 <- exp(rnorm(k*k))
@@ -94,6 +91,4 @@ RT <- foreach(batch=1:cores, .combine=rbind) %dopar%
 labs <- str_split_fixed(RT[['expr']],"_",3)
 colnames(labs) <- c("stat","pattern","type")
 runtimes <- cbind(RT, labs)
-
-save(cases, runtimes, file="vignettes/runtimes.Rdata")
 

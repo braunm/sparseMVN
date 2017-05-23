@@ -41,10 +41,7 @@
 #'    CH <- Cholesky(V)
 #' 
 #'    x <- rmvn.sparse(10,rep(0,p*m+k),CH, FALSE)
-#'  ##  print(x)
-#' 
 #'    y <- dmvn.sparse(x[1,],rep(0,p*m+k), CH, FALSE)
-#'  ##  print(y)
 #'
 #' @export
 rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
