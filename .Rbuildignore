@@ -15,6 +15,7 @@ data-raw/*
 ^NEWS\.md
 ^cran-comments\.md$
 ^nobuild/*
+^figure/*
 vignettes/.*\.bbl$
 vignettes/.*\.blg$
 vignettes/prv\_.*

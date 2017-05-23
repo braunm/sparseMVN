@@ -1,6 +1,6 @@
 # NEWS file for sparseMVN package
 
-## VERSION 0.2.1 (May 6, 2017)
+## VERSION 0.2.1 (May 23, 2017)
 
 * New vignette.
 
