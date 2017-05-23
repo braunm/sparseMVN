@@ -1,9 +1,9 @@
 
 \documentclass[codesnippet,nojss]{jss}
 
-  %\VignetteEngine{knitr::knitr}
-% \VignetteIndexEntry{Using sparseMVN_new}
- %\VignetteKeyword{sparseMVN}
+%\VignetteEngine{knitr::knitr}
+% \VignetteIndexEntry{Using sparseMVN}
+%\VignetteKeyword{sparseMVN}
 
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
@@ -20,16 +20,12 @@
 \newcommand{\class}[1]{\textsl{#1}}
 \newcommand{\funcarg}[1]{\code{#1}}
 \newcommand{\variable}[1]{\code{#1}}
-\newcommand{\method}[1]{\func{#1}}
 \newcommand{\Cond}[2]{\left.#1\,\middle|\,#2\right.}
 \newcommand{\EV}[1]{\mathbf{E}\!\left(#1\right)}
 \newcommand{\Var}[1]{\mathbf{var}\!\left(#1\right)}
-\newcommand{\SD}[1]{\mathbf{SD}\!\left(#1\right)}
-\newcommand{\SE}[1]{\mathbf{SE}\!\left(#1\right)}
 \newcommand{\dist}[2]{#1\!\left(#2\right)}
 \newcommand{\Logit}[1]{\logit\!\left(#1\right)}
 \newcommand{\Cov}[1]{\mathbf{cov}\!\left(#1\right)}
-\newcommand{\Corr}[2]{\mathbf{corr}\!\left(#1,\,#2\right)}
 \newcommand{\Norm}[1]{\mathbf{N}\!\left(#1\right)}
 \newcommand{\MVN}[1]{\mathbf{MVN}\!\left(#1\right)}
 \newcommand{\Real}[1]{\mathbb{R}^{#1}}
@@ -254,14 +250,14 @@ most important class for our purposes is
 vectors define the underlying matrix:
 the unique nonzero values (just one triangle is needed), the indices
 in the value vector for the first value in each column, and the indices of the rows in
-which each value is located. Roughly speaking, the storage requirements
+which each value is located. The storage requirements
 for a sparse $M\times M$ symmetric matrix with $V$ unique nonzero
 elements in one triangle are for $V$ double precision numbers, $V+M+1$ integers, and
 some metadata.  In contrast, a dense representation of the same matrix
 stores $M^2$ double precision values, regardless of symmetry and the number of
 zeros. If $V$ grows more slowly than $M^2$, the matrix becomes
 increasingly sparse (a smaller percentage of elements are nonzero),
-and there are greater efficiency gains from storing the matrix in a
+with greater efficiency gains from storing the matrix in a
 compressed sparse format.
 
 \subsubsection{An example}
@@ -551,9 +547,6 @@ tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
     reshape2::dcast(N+k+time~stat+pattern)
 @
 
-
-
-
 \section{Timing}
 
 In this section we show the efficiency gains from \pkg{sparseMVN} by comparing the run times between \func{rmvn.sparse} and
@@ -698,42 +691,6 @@ fig2
 Code to replicate the data used in Figures~\ref{fig:densRand} and \ref{fig:cholSolve}
 is available as an online supplement to this paper, and in the
 \func{doc/} directory of the installed package.
-
-\section{Other packages for creating and using sparse matrices}
-
-Deriving utility from \pkg{sparseMVN} depends on being able to create
-and use sparse matrices.  This section describes briefly two other
-\proglang{R} packages that may be useful.
-
-\subsection{sparseHessianFD}
-
-Suppose you have a objective function that has a sparse Hessian (e.g.,
-the log posterior density for a hierarchical model).  You have an
-\proglang{R} function that computes the value of the objective, and another
-function that computes its gradient.  You may also need the Hessian,
-either for a nonlinear optimization routine, or as the negative
-precision matrix of an MVN approximation. The derivation of the
-Hessian might be too tedious or complicated to derive it analytically,
-or too large to estimate numerically.  However, for many applications
-(e.g., a hierarchical model with conditional independence), it is easy
-to identify which elements in the Hessian are nonzero.
-
-The \pkg{sparseHessianFD} package \citep{R_sparseHessianFD} provides
-functions to estimate the Hessian numerically, but in a
-way that exploits the fact that the Hessian is sparse, and that the
-pattern is known.  The package contains functions that return the
-Hessian as a sparse \class{dgCMatrix}.  This object can be coerced into a
-\class{dsCMatrix}, which in turn can be used by \func{rmvn.sparse} and
-\func{dmvn.sparse}.
-
-\subsection{trustOptim}
-
-The \pkg{trustOptim} package provides a nonlinear optimization routine
-that takes the Hessian as a sparse \class{dgCMatrix} object.  This optimizer
-is useful for unconstrained optimization of a high-dimensional
-objective function with a sparse Hessian.  It uses a trust region
-algorithm, which may be more stable and robust than line search
-approaches.
 
 
 
