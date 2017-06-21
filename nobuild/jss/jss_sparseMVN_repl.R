@@ -72,12 +72,14 @@ get_batch <- function(i, cases, reps=10) {
 }
 
 
+cores <- 10
 reps <- 200
 times <- ceiling(reps/cores)
 
+
 ## times in milliseconds
-cases <- expand.grid(s = 1000,
-                     N = c(10, 20, 50, 100, 200, 300, 400, 500),
+cases <- expand.grid(s = 100,#0,
+                     N = c(10, 20), # 50, 100, 200, 300, 400, 500),
                      k = c(2,4)) %>%
     mutate(nvars=(N+1)*k,
            nels = nvars^2,
@@ -85,8 +87,7 @@ cases <- expand.grid(s = 1000,
            nnzLT = (N+1) * k*(k+1)/2 + N*k*k,
            pct.nnz = nnz/nels)
 
-RT <- foreach(batch=1:cores, .combine=rbind) %dopar%
-    get_batch(batch, cases, reps=times)
+RT <- plyr::ldply(1:cores, get_batch, cases, reps=times)
 
 labs <- str_split_fixed(RT[['expr']],"_",3)
 colnames(labs) <- c("stat","pattern","type")
