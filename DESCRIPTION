@@ -12,7 +12,7 @@ Description: Computes multivariate normal (MVN) densities, and
     precision matrix is sparse.
 License: MPL (>= 2.0)
 Depends:
-    R (>= 3.4.4)
+    R (>= 3.4.0)
 Imports:
     Matrix (>= 1.2.12),
     methods
