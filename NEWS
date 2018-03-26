@@ -2,6 +2,9 @@
 
 NEWS FILE FOR SPARSEMVN PACKAGE
 
+VERSION 0.2.1.1 (Mar. 26, 2018)
+
+-   Removed deprecated Matrix package functions cBind and rBind.
 
 VERSION 0.2.1
 

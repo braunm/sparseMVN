@@ -53,8 +53,8 @@ if pivoting was turned off.
 
 ## build sample sparse covariance matrix
    Q1 <- tril(kronecker(Matrix(seq(0.1,p,length=p*p),p,p),diag(m)))
-   Q2 <- cBind(Q1,Matrix(0,m*p,k))
-   Q3 <- rBind(Q2,cBind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
+   Q2 <- cbind(Q1,Matrix(0,m*p,k))
+   Q3 <- rbind(Q2,cbind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
    V <- tcrossprod(Q3)
    CH <- Cholesky(V)
 

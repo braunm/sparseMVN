@@ -1,5 +1,10 @@
 # NEWS file for sparseMVN package
 
+## VERSION 0.2.1.1 (Mar. 26, 2018)
+
+*  Removed deprecated Matrix package functions cBind and rBind.
+
+
 ## VERSION 0.2.1 (May 23, 2017)
 
 * New vignette.

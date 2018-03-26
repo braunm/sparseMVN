@@ -90,7 +90,7 @@ binary.hess <- function(P, data, priors, order.row=FALSE) {
     }
 
     Bmu <- .d2.dmu(N,SX, XO)
-    res <- rbind(cbind(B2, Matrix::t(cross)),cBind(cross, Bmu))
+    res <- rbind(cbind(B2, Matrix::t(cross)),cbind(cross, Bmu))
 
     return(drop0(res))
 }
