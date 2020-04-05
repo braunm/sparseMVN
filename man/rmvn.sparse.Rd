@@ -3,7 +3,6 @@
 \name{rmvn.sparse}
 \alias{rmvn.sparse}
 \alias{dmvn.sparse}
-\alias{dmvn.sparse}
 \title{Multivariate normal functions with sparse covariance/precision matrix.}
 \usage{
 rmvn.sparse(n, mu, CH, prec = TRUE)
