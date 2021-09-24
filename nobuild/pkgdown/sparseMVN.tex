@@ -1,5 +1,20 @@
 
-\documentclass[codesnippet,nojss]{jss}
+\documentclass[codesnippet,nojss]{jss}\usepackage[]{graphicx}\usepackage[]{color}
+% maxwidth is the original width if it is less than linewidth
+% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\usepackage{Sweave}
+
+
 
 %\VignetteEngine{knitr::knitr}
 % \VignetteIndexEntry{Using sparseMVN}
@@ -12,7 +27,7 @@
 \usepackage{booktabs}
 \usepackage{etoolbox}
 \usepackage{placeins}
-\usepackage{array
+\usepackage{array}
 \usepackage{tabularx}
 \usepackage{multirow}
 
@@ -66,25 +81,10 @@ algorithms that are optimized for sparse covariance and precision matrices.
 \date{April 7, 2017}
 
 %% need no \usepackage{Sweave.sty}
-
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
-<<echo=FALSE, cache=FALSE>>=
-suppressPackageStartupMessages(library("sparseMVN"))
-suppressPackageStartupMessages(library("Matrix"))
-suppressPackageStartupMessages(library("mvtnorm"))
-suppressPackageStartupMessages(library("dplyr"))
-suppressPackageStartupMessages(library("xtable"))
-suppressPackageStartupMessages(library("ggplot2"))
 
-knitr::render_sweave()
-knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
-                      comment="#", collapse=FALSE) #$
-options(replace.assign=TRUE, width=77, prompt="R> ",
-        digits=4, xtable.include.rownames=FALSE,
-        xtable.booktabs=TRUE)
-sanitize <- function(x) x
-@
 
 The \pkg{mvtnorm} package \citep{R_mvtnorm} provides the
 \func{dmvnorm} function to compute the density of a multivariate
@@ -315,21 +315,7 @@ must be zero.  When $N$ is much greater than $k$, there will be many
 more zero cross-partial derivatives than nonzero, and the Hessian of
 the log posterior density will be sparse.
 
-<<echo=FALSE>>=
-N <- 5
-k <- 2
-p <- k ## dimension of mu
-nv1 <- N*k+p
-nels1 <- nv1^2
-nnz1 <- N*k^2 + 2*p*N*k + p^2
-nnz1LT <- N*k*(k+1)/2  + p*N*k + p*(p+1)/2
-Q <- 1000
-nv2 <- Q*k+p
-nels2 <- nv2^2
-nnz2 <- Q*k^2 + 2*p*Q*k + p^2
-nnz2LT <- Q*k*(k+1)/2 + p*Q*k + p*(p+1)/2
-options(scipen=999)
-@
+
 
 The sparsity pattern depends on how the variables are
 ordered. One such ordering is to group all of the
@@ -339,8 +325,8 @@ at the end.
 \beta_{11},\dotsc,\beta_{1k},\beta_{21},\dotsc,\beta_{2k},~\dotsc~,\beta_{N1},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k
 \end{align}
 In this case, the Hessian has a ``block-arrow'' pattern.  Figure
-\ref{fig:blockarrow} illustrates this pattern for $N=\Sexpr{scales::comma(N)}$
-and $k=\Sexpr{k}$ (\Sexpr{nv1} total
+\ref{fig:blockarrow} illustrates this pattern for $N=5$
+and $k=2$ (12 total
 variables).
 
 Another possibility is to group coefficients for each covariate
@@ -352,51 +338,66 @@ Now the Hessian has an "banded" sparsity pattern, as in Figure~\ref{fig:banded}.
 
 \begin{figure}[tbp]\centering
    \begin{subfigure}[b]{.5\textwidth}
-<<blockarrow, echo=FALSE, comment=NA>>=
-Mat <- as(kronecker(diag(N), matrix(1, k, k)),"sparseMatrix")
-Mat <- rbind(Mat, Matrix(1, p, N*k))
-Mat <- cbind(Mat, Matrix(1, k*N+p, p))
-printSpMatrix(as(Mat,"nMatrix"))
-@
+\begin{Schunk}
+\begin{Soutput}
+
+ [1,] | | . . . . . . . . | |
+ [2,] | | . . . . . . . . | |
+ [3,] . . | | . . . . . . | |
+ [4,] . . | | . . . . . . | |
+ [5,] . . . . | | . . . . | |
+ [6,] . . . . | | . . . . | |
+ [7,] . . . . . . | | . . | |
+ [8,] . . . . . . | | . . | |
+ [9,] . . . . . . . . | | | |
+[10,] . . . . . . . . | | | |
+[11,] | | | | | | | | | | | |
+[12,] | | | | | | | | | | | |
+\end{Soutput}
+\end{Schunk}
 \caption{A ``block-arrow'' sparsity pattern.}\label{fig:blockarrow}
 \end{subfigure}%
 \begin{subfigure}[b]{.5\textwidth}
-<<banded, echo=FALSE, comment=NA>>=
-Mat <- kronecker(Matrix(1, k, k), diag(N))
-Mat <- rbind(Mat, Matrix(1, p, N * k))
-Mat <- cbind(Mat, Matrix(1, k*N+p, p))
-printSpMatrix(as(Mat,"nMatrix"))
-@
+\begin{Schunk}
+\begin{Soutput}
+
+ [1,] | . . . . | . . . . | |
+ [2,] . | . . . . | . . . | |
+ [3,] . . | . . . . | . . | |
+ [4,] . . . | . . . . | . | |
+ [5,] . . . . | . . . . | | |
+ [6,] | . . . . | . . . . | |
+ [7,] . | . . . . | . . . | |
+ [8,] . . | . . . . | . . | |
+ [9,] . . . | . . . . | . | |
+[10,] . . . . | . . . . | | |
+[11,] | | | | | | | | | | | |
+[12,] | | | | | | | | | | | |
+\end{Soutput}
+\end{Schunk}
  \caption{A ``banded'' sparsity pattern.}\label{fig:banded}
 \end{subfigure}
 \caption{Two examples of sparsity patterns for a hierarchical model.}\label{fig:patterns}
 \end{figure}
 
 
-<<echo=FALSE, results="hide">>=
-Mat2 <- as(kronecker(diag(Q),matrix(1,k,k)),"lMatrix") %>%
-    rbind(Matrix(TRUE,p,Q*k)) %>%
-    cbind(Matrix(TRUE, k*Q+p, p)) %>%
-    as("dgCMatrix") %>%
-    as("symmetricMatrix")
-A2 <- as(Mat2,"matrix")
-@
 
-In both cases, the number of nonzeros is the same.  There are \Sexpr{nels1} elements in this symmetric matrix.  If the
+
+In both cases, the number of nonzeros is the same.  There are 144 elements in this symmetric matrix.  If the
 matrix is stored in the standard \pkg{base} \proglang{R} dense
-format, memory is reserved for all \Sexpr{nels1} values, even though only \Sexpr{nnz1} values are
-nonzero, and only \Sexpr{nnz1LT} values are unique. For larger
+format, memory is reserved for all 144 values, even though only 64 values are
+nonzero, and only 38 values are unique. For larger
 matrices, the reduction in memory requirements by storing the matrix
 in a sparse format can be substantial.\footnote{Because sparse matrix
   structures store row and column indices of the nonzero values, they
   may use more memory than dense storage if the total number of
-  elements is small}. If $N=$\Sexpr{scales::comma(Q)}, then
-$M=$\Sexpr{scales::comma(nv2)}, with more than $\Sexpr{floor(nels2/10^6)}$ million
-elements in the Hessian.  However, only \Sexpr{scales::comma(nnz2)} of those elements are
-nonzero, with \Sexpr{scales::comma(nnz2LT)} unique values in the lower
+  elements is small}. If $N=$1,000, then
+$M=$2,002, with more than $4$ million
+elements in the Hessian.  However, only 12,004 of those elements are
+nonzero, with 7,003 unique values in the lower
 triangle.  The dense
-matrix requires \Sexpr{format(object.size(A2),units='Mb')} of RAM,
-while a sparse symmetric matrix of the \class{dsCMatrix} class requires only \Sexpr{format(object.size(Mat2),units='Kb')}.
+matrix requires 30.6 Mb of RAM,
+while a sparse symmetric matrix of the \class{dsCMatrix} class requires only 91.6 Kb.
 
 This example is relevant because, when evaluated at the posterior
 mode, the Hessian matrix of the log posterior is the MVN precision
@@ -413,10 +414,12 @@ dense linear algebra routines, including matrix factorization.
 
 The signatures of the \pkg{sparseMVN} key sparse matrix functions are
 
-<<eval=FALSE, prompt=FALSE>>=
+\begin{Schunk}
+\begin{Sinput}
 rmvn.sparse(n, mu, CH, prec=TRUE)
 dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
-@
+\end{Sinput}
+\end{Schunk}
 
 The \func{rmvn.sparse} function returns a matrix $x$ with \funcarg{n}
 rows and \func{length(mu)} columns.  \func{dmvn.sparse} returns a
@@ -473,79 +476,87 @@ function in the \pkg{trustOptim} package \citep{R_trustOptim} is a
 nonlinear optimizer that estimates the curvature of the objective
 function using a sparse Hessian.
 
-<<results='hide'>>=
-D <- sparseMVN::binary.sim(N=50, k=2, T=50)
-priors <- list(inv.A=diag(2), inv.Omega=diag(2))
-start <- rep(c(-1,1),51)
-opt <- trustOptim::trust.optim(start,
-                               fn=sparseMVN::binary.f,
-                               gr=sparseMVN::binary.grad,
-                               hs=sparseMVN::binary.hess,
-                               data=D, priors=priors,
-                               method="Sparse",
-                               control=list(function.scale.factor=-1))
-@
+\begin{Schunk}
+\begin{Sinput}
+R> D <- sparseMVN::binary.sim(N=50, k=2, T=50)
+R> priors <- list(inv.A=diag(2), inv.Omega=diag(2))
+R> start <- rep(c(-1,1),51)
+R> opt <- trustOptim::trust.optim(start,
++                                fn=sparseMVN::binary.f,
++                                gr=sparseMVN::binary.grad,
++                                hs=sparseMVN::binary.hess,
++                                data=D, priors=priors,
++                                method="Sparse",
++                                control=list(function.scale.factor=-1))
+\end{Sinput}
+\end{Schunk}
 
 The call to \func{trust.optim} returns the posterior mode, and the
 Hessian evaluated at the mode. These results serve as the mean and the negative precision
 of the MVN approximation to the posterior distribution of the model.
 
-<<>>=
-R <- 100
-pm <- opt[["solution"]]
-H <- -opt[["hessian"]]
-CH <- Cholesky(H)
-
-@
+\begin{Schunk}
+\begin{Sinput}
+R> R <- 100
+R> pm <- opt[["solution"]]
+R> H <- -opt[["hessian"]]
+R> CH <- Cholesky(H)
+\end{Sinput}
+\end{Schunk}
 
 We can then sample from the posterior using an MVN approximation, and compute the MVN log density for each sample.
 
-<<>>=
-samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
-logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
-@
+\begin{Schunk}
+\begin{Sinput}
+R> samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
+R> logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
+\end{Sinput}
+\end{Schunk}
 
 The ability to accept a precision matrix, rather than having to invert
 it to a covariance matrix, is a valuable feature of \pkg{sparseMVN}.
 This is because the inverse of a sparse matrix is not necessarily
 sparse. In the following chunk, we invert the Hessian, and drop zero
 values to maintain any remaining sparseness. Note that there are
-\Sexpr{scales::comma(102^2)} total elements in the Hessian.
+10,404 total elements in the Hessian.
 
-<<>>=
-Matrix::nnzero(H)
-Hinv <- drop0(solve(H))
-Matrix::nnzero(Hinv)
-@
+\begin{Schunk}
+\begin{Sinput}
+R> Matrix::nnzero(H)
+\end{Sinput}
+\begin{Soutput}
+# [1] 402
+\end{Soutput}
+\begin{Sinput}
+R> Hinv <- drop0(solve(H))
+R> Matrix::nnzero(Hinv)
+\end{Sinput}
+\begin{Soutput}
+# [1] 10404
+\end{Soutput}
+\end{Schunk}
 
 Nevertheless, we should check that the log densities from
 \func{dmvn.sparse} correspond to those that we would get from \func{dmvnorm}.
 
-<<>>=
-logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
-all.equal(logf, logf_dense)
-@
-
-<<echo=FALSE>>=
-load("runtimes.Rdata")
-@
-
-<<echo=FALSE>>=
-tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
-    group_by(N, k, stat, pattern, type) %>%
-    summarize(mean_ms=mean(time/1000000),
-              sd_ms=sd(time/1000000)) %>%
-    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
-    reshape2::dcast(N+k+stat+time~pattern+type)
+\begin{Schunk}
+\begin{Sinput}
+R> logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
+R> all.equal(logf, logf_dense)
+\end{Sinput}
+\begin{Soutput}
+# [1] TRUE
+\end{Soutput}
+\end{Schunk}
 
 
-tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
-    group_by(N, k, stat, pattern, type) %>%
-    summarize(mean_ms=mean(time/1000000),
-              sd_ms=sd(time/1000000)) %>%
-    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
-    reshape2::dcast(N+k+time~stat+pattern)
-@
+
+\begin{Schunk}
+\begin{Soutput}
+# `summarise()` has grouped output by 'N', 'k', 'stat', 'pattern'. You can override using the `.groups` argument.
+# `summarise()` has grouped output by 'N', 'k', 'stat', 'pattern'. You can override using the `.groups` argument.
+\end{Soutput}
+\end{Schunk}
 
 \section{Timing}
 
@@ -568,20 +579,26 @@ conditions.
     \cmidrule(lr){5-7}
     &$N$&variables&elements&full&lower tri&sparsity\\
     \midrule
-<<echo=FALSE,results='asis'>>=
-tmp <- c("\\multirow{8}{*}{k=2}",rep(NA,7),
-         "\\multirow{8}{*}{k=4}",rep(NA,7))
-mutate(cases, tmp=tmp) %>%
-    select(tmp,N, nvars,nels,
-           nnz, nnzLT, pct.nnz) %>%
-    xtable::xtable(digits=c(rep(0,7),3)) %>%
-    print(include.rownames=FALSE,only.contents=TRUE,
-          include.colnames=FALSE,
-          floating=FALSE, sanitize.colnames.function=sanitize,
-          sanitize.text.function=sanitize,
-          hline.after=8,
-          format.args=list(big.mark=","))
-@
+% latex table generated in R 4.1.0 by xtable 1.8-4 package
+% Fri Sep 24 11:19:18 2021
+ \multirow{8}{*}{k=2} & 10 & 22 & 484 & 124 & 73 & 0.256 \\
+   & 20 & 42 & 1,764 & 244 & 143 & 0.138 \\
+   & 50 & 102 & 10,404 & 604 & 353 & 0.058 \\
+   & 100 & 202 & 40,804 & 1,204 & 703 & 0.030 \\
+   & 200 & 402 & 161,604 & 2,404 & 1,403 & 0.015 \\
+   & 300 & 602 & 362,404 & 3,604 & 2,103 & 0.010 \\
+   & 400 & 802 & 643,204 & 4,804 & 2,803 & 0.007 \\
+   & 500 & 1,002 & 1,004,004 & 6,004 & 3,503 & 0.006 \\
+   \midrule
+\multirow{8}{*}{k=4} & 10 & 44 & 1,936 & 496 & 270 & 0.256 \\
+   & 20 & 84 & 7,056 & 976 & 530 & 0.138 \\
+   & 50 & 204 & 41,616 & 2,416 & 1,310 & 0.058 \\
+   & 100 & 404 & 163,216 & 4,816 & 2,610 & 0.030 \\
+   & 200 & 804 & 646,416 & 9,616 & 5,210 & 0.015 \\
+   & 300 & 1,204 & 1,449,616 & 14,416 & 7,810 & 0.010 \\
+   & 400 & 1,604 & 2,572,816 & 19,216 & 10,410 & 0.007 \\
+   & 500 & 2,004 & 4,016,016 & 24,016 & 13,010 & 0.006 \\
+
 \bottomrule
 \end{tabular}
 \caption{Cases for timing comparision. $N$ and $k$ refer,
@@ -594,11 +611,7 @@ mutate(cases, tmp=tmp) %>%
   sparsity (proportion of matrix elements that are nonzero).}\label{tab:cases}
 \end{table}
 
-<<echo=FALSE>>=
-tmp <- filter(tab1, N==min(tab1[['N']]) & k==min(tab1[['k']])
-              & time=="mean_ms" & stat=="density")
-sm <- with(tmp, c(dense_cov,sparse_cov))
-@
+
 
 
 Figure~\ref{fig:densRand} compares mean run times to compute 1,000 MVN densities, and generate 1,000
@@ -610,9 +623,9 @@ MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
   The times for \pkg{mvtnorm} are faster than
   \pkg{sparseMVN} for low dimensional cases ($N\leq 50$), but grow
   quadratically in the number of variables.\footnote{As an example, in
-    the $N=\Sexpr{min(tab1[['N']])}$, $k=\Sexpr{min(tab1[['k']])}$ case, the mean time to compute 1,000 MVN
-    densities is \Sexpr{format(sm[1],digits=2)} ms using \func{dmvnorm}, but more
-    than \Sexpr{format(sm[2],digits=2)} ms using \func{dmvn.sparse}.}  This is because the number
+    the $N=10$, $k=2$ case, the mean time to compute 1,000 MVN
+    densities is 1.1 ms using \func{dmvnorm}, but more
+    than 3.7 ms using \func{dmvn.sparse}.}  This is because the number
   of elements stored in a dense covariance matrix grows quadratically
   with the number of variables. In this example,
   storage and computation requirements for the sparse matrix grow linearly with the number
@@ -623,24 +636,9 @@ MVN samples, using functions in \pkg{sparseMVN} (\func{rmvn.sparse},
     when providing the precision matrix instead of the covariance.}
 
 \begin{figure}[tb]
-<<echo=FALSE, fig.height=5>>=
-theme_set(theme_bw())
-fig1 <- filter(tab1, time=="mean_ms") %>%
-    mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
-    rename(dense=dense_cov, sparse=sparse_cov) %>%
-    tidyr::gather(pattern, value, c(dense, sparse)) %>%
-    ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
-    + geom_line() %>%
-    + geom_point(size=2) %>%
-    + scale_x_continuous("Number of blocks (N)") %>%
-    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual("Pattern",values=c(dense='red', sparse='blue')) %>%
-    + scale_shape("Pattern") %>%
-    + scale_linetype("Pattern") %>%
-    + facet_grid(stat~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
-    + theme(strip.background=element_rect(fill='white'))
-fig1
-@
+\begin{Schunk}
+
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-14-1} \end{Schunk}
 \caption{Mean computation time for simulating 1,000 MVN samples, and
   computing 1,000 MVN densities, averaged over 200 replications.
   Densities were computed using \func{dmvnorm} and
@@ -665,25 +663,9 @@ negligible. For example, the mean run time for the $N=500$,
 $k=4$ case is about 0.39 ms.
 
 \begin{figure}[tb]
-<<echo=FALSE,fig.height=3>>=
-fig2 <- filter(tab2, time=="mean_ms") %>%
-    rename(`dense inversion`=solve_dense,
-           `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
-    tidyr::gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`)) %>%
-    ggplot(aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) %>%
-    + geom_line() %>%
-    + geom_point(size=2) %>%
-    + scale_x_continuous("Number of blocks (N)") %>%
-    + scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) %>%
-    + scale_color_manual("Pattern/Operation",
-                         values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
-                                  `dense inversion`='black')) %>%
-    + scale_shape("Pattern/Operation") %>%
-    + scale_linetype("Pattern/Operation") %>%
-    + facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) %>%
-    + theme(strip.background=element_rect(fill='white'))
-fig2
-@
+\begin{Schunk}
+
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-15-1} \end{Schunk}
 \caption{Computation time for Cholesky decomposition of sparse and
   dense matrices, and inversion of dense matrices.}\label{fig:cholSolve}
 \end{figure}

@@ -24,3 +24,4 @@ cache
 inst/doc/*
 doc
 Meta
+/doc/

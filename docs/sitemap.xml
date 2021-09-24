@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>/404.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/404.html</loc>
   </url>
   <url>
-    <loc>/authors.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/authors.html</loc>
   </url>
   <url>
-    <loc>/index.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/index.html</loc>
   </url>
   <url>
-    <loc>/news/index.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/news/index.html</loc>
   </url>
   <url>
-    <loc>/reference/binary.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/reference/binary.html</loc>
   </url>
   <url>
-    <loc>/reference/index.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/reference/index.html</loc>
   </url>
   <url>
-    <loc>/reference/rmvn.sparse.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/reference/rmvn.sparse.html</loc>
   </url>
   <url>
-    <loc>/reference/sparseMVN-package.html</loc>
+    <loc>https://braunm.github.io/sparseMVN/reference/sparseMVN-package.html</loc>
   </url>
 </urlset>

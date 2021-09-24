@@ -12,8 +12,8 @@
 <!-- jquery -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 <!-- Bootstrap -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/3.4.0/spacelab/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous" />
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/css/bootstrap.min.css" integrity="sha256-bZLfwXAP04zRMK2BjiO8iu9pf4FbLqX6zitd+tIvLhE=" crossorigin="anonymous" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.4.1/js/bootstrap.min.js" integrity="sha256-nuL8/2cJ5NDSSwnKD8VqreErSWHtnEP9E7AySL+1ev4=" crossorigin="anonymous"></script>
 
@@ -56,6 +56,16 @@
 <![endif]-->
 
 
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9Q2M3WL4Z1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-9Q2M3WL4Z1');
+</script>
+
 
   
 
@@ -79,7 +89,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">sparseMVN</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2.1.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.2.2</span>
       </span>
     </div>
 
@@ -93,7 +103,12 @@
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
-        
+        <li>
+  <a href="https://github.com/braunm/sparseMVN/">
+    <span class="fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
       </ul>
       
     </div><!--/.nav-collapse -->
@@ -108,9 +123,43 @@
   <div class="col-md-9 contents">
     <div class="page-header">
       <h1 data-toc-skip>Changelog <small></small></h1>
-      
+      <small>Source: <a href='https://github.com/braunm/sparseMVN/blob/master/NEWS.md'><code>NEWS.md</code></a></small>
     </div>
 
+    <div id="sparsemvn-022" class="section level1">
+<h1 class="page-header" data-toc-text="0.2.2">
+<a href="#sparsemvn-022" class="anchor" aria-hidden="true"></a>sparseMVN 0.2.2<small> Unreleased </small></h1>
+<ul><li>Added links to new pkgdown website</li>
+<li>Other minor fixes</li>
+</ul></div>
+    <div id="sparsemvn-0212" class="section level1">
+<h1 class="page-header" data-toc-text="0.2.1.2">
+<a href="#sparsemvn-0212" class="anchor" aria-hidden="true"></a>sparseMVN 0.2.1.2<small> Unreleased </small></h1>
+<ul><li>Update DESCRIPTION file to be consistent with Roxygen2 &gt;= 7.1.0</li>
+</ul></div>
+    <div id="sparsemvn-0211" class="section level1">
+<h1 class="page-header" data-toc-text="0.2.1.1">
+<a href="#sparsemvn-0211" class="anchor" aria-hidden="true"></a>sparseMVN 0.2.1.1<small> 2018-03-26 </small></h1>
+<ul><li>Removed deprecated Matrix package functions cBind and rBind.</li>
+</ul></div>
+    <div id="sparsemvn-021" class="section level1">
+<h1 class="page-header" data-toc-text="0.2.1">
+<a href="#sparsemvn-021" class="anchor" aria-hidden="true"></a>sparseMVN 0.2.1<small> 2017-05-24 </small></h1>
+<ul><li>New vignette.</li>
+</ul></div>
+    <div id="sparsemvn-020" class="section level1">
+<h1 class="page-header" data-toc-text="0.2.0">
+<a href="#sparsemvn-020" class="anchor" aria-hidden="true"></a>sparseMVN 0.2.0<small> 2015-02-06 </small></h1>
+<ul><li><p>Major overhaul of package structure, with new vignettes. Demos were removed in favor of vignettes.</p></li>
+<li><p>New tests using testthat package.</p></li>
+<li><p>Documentation now generated with roxygen2</p></li>
+<li><p>Now using github for development</p></li>
+</ul></div>
+    <div id="sparsemvn-010" class="section level1">
+<h1 class="page-header" data-toc-text="0.1.0">
+<a href="#sparsemvn-010" class="anchor" aria-hidden="true"></a>sparseMVN 0.1.0<small> 2013-11-05 </small></h1>
+<ul><li>First beta release.</li>
+</ul></div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -124,7 +173,7 @@
 
       <footer>
       <div class="copyright">
-  <p><p>Developed by Michael Braun.</p></p>
+  <p><p>Developed by <a href="https://braunm.github.io" class="external-link">Michael Braun</a>.</p></p>
 </div>
 
 <div class="pkgdown">
