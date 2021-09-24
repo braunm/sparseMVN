@@ -1,21 +1,21 @@
+sparseMVN 0.2.2
 
+-   Added links to new pkgdown website
+-   Other minor fixes
 
-NEWS FILE FOR SPARSEMVN PACKAGE
-
-VERSION 0.2.1.2 (2020-04-04)
+sparseMVN 0.2.1.2
 
 -   Update DESCRIPTION file to be consistent with Roxygen2 >= 7.1.0
 
-VERSION 0.2.1.1 (2018-03-26)
+sparseMVN 0.2.1.1
 
 -   Removed deprecated Matrix package functions cBind and rBind.
 
-VERSION 0.2.1
+sparseMVN 0.2.1
 
 -   New vignette.
 
-
-VERSION 0.2.0 (2015-02-05)
+sparseMVN 0.2.0
 
 -   Major overhaul of package structure, with new vignettes. Demos were
     removed in favor of vignettes.
@@ -26,8 +26,6 @@ VERSION 0.2.0 (2015-02-05)
 
 -   Now using github for development
 
+sparseMVN 0.1.0
 
-VERSION 0.1.0 (2013-11-01)
-
--   First release.
-
+-   First beta release.
