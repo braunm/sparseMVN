@@ -30,3 +30,6 @@ inst/doc/\.install.extras
 
 ^doc$
 ^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
