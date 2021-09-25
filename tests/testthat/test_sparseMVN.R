@@ -24,7 +24,7 @@ test_that("sparseMVN", {
     CV.base <- as(CV, "matrix")
 
 
-browser()
+
 
 
     ## sample N MVN's

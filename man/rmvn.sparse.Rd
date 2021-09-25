@@ -33,8 +33,8 @@ designed for MVN samples of very large dimension.
 }
 \section{Details}{
 
-These functions uses sparse matrix operations to sample from, or compute the
-log density of, a multivariate normal distribution  The user must compute
+These functions use sparse matrix operations to sample from, or compute the
+log density of, a multivariate normal distribution.  The user must compute
 the Cholesky decomposition first, using the Cholesky function in the Matrix
 package.  This function operates on a sparse symmetric matrix, and returns
 an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm

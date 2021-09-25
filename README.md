@@ -17,29 +17,35 @@ install_github("braunm/sparseMVN")
 
 # Using the package
 
-To establish some definitions, let $$x\sim MVN(\mu,\Sigma)$$ be a k-dimensional MVN random variate, where $\mu$ is a mean vector, $\Sigma$ is a $k \times k$ covariance matrix, and its inverse, $\Sigma^{-1}$ is the precision matrix. When the distinction is unimportant, $\Sigma^*$ will represent  either $\Sigma$ or $\Sigma^{-1}$.
+To establish some definitions, let $$x\sim MVN(\mu,\Sigma)$$ be a k-dimensional MVN random variate, where $\mu$ is a mean vector, $\Sigma$ is a $k \times k$ covariance matrix, and its inverse, $\Sigma^{-1}$ is the precision matrix.
+
+When the distinction is unimportant, $\Sigma^*$ will represent  either $\Sigma$ or $\Sigma^{-1}$.
+
+The `rmvn.sparse()` function samples $x$ from this distribution, and  `dmvn.sparse()` computes its density.  They work much like `mvtnorm::rmvnorm` and `mvtnorm::dmvnorm`,  except that instead of providing the covariance matrix $\Sigma$ as a garden-variety, base R matrix, the user provides a sparse Cholesky factorization of either the covariance or the precision.
+
+The reasons why this is a good strategy are detailed in the vignette, but put simply, sparseMVN does the following:
+
+1.  It avoids storing redundant or duplicate data in memory.  Even in a dense symmetric matrix, all of the $\binom{k-1}{2}$ in the upper triangle are duplicated in the lower triangle.  Also, elements in a large sparse matrix are nearly all zeros, so why store them?  It is more efficient to compress only the nonzero values into a format that points to where in the matrix those values belong.  Then, we can use sparse linear algebra routines on those matrices (dense routines would perform a lot of multiply-by-zero operations, which are clearly wasteful).
+
+2.  It lets the user factor a matrix just once, and reuse that factorization in subsequent calls to `rmvn.sparse()` and `dmvn.sparse()`.   Under the hood, every call to `rmvnorm` or `dmvnorm` involves factoring a matrix, which is repetitive if that matrix does not change.
 
 
+Here's an example. Suppose mu and S are the mean and covariance of an MVN random variable, and that S is symmetric (obviously) and sparse, but stored as a typical base R matrix. First, the user has to coerce S into a `dsCMatrix` object, which is symmetric, sparse, and column-compressed. Then, the user creates a `CHMsuper` or `CHMsimpl` object containing information about the sparse Cholesky decomposition.
 
-
-The `rmvn.sparse()` function samples $x$ from this distribution, and  `dmvn.sparse()` computes the density.  They work much like `mvtnorm::rmvnorm` and `mvtnorm::dmvnorm`,  except that:
-
-1.  the `mvtnorm` functions require the user to provide the covariance matrix $\Sigma$ as a garden-variety, base R matrix with $k^2$ elements; while
-2. the `sparseMVN` functions require  the user to provide a sparse Cholesky factorization of the matrix, but that matrix can be *either* the covariance $\Sigma$ *or* the precision $\Sigma$.
-
-The option to work with the precision matrix is useful because sometimes, that's what the user has.  An example is a Laplace approximation of a log posterior density, where covariance of approximating MVN is the *inverse* of the Hessian.  Being able to use the Hessian directly as the precision matrix saves a matrix inversion step that can be computationally costly when $k$ is very large.
-
-
-Operations on a dense and "unstructured"  representation of a covariance matrix  do not take symmetry and sparsity into account.
-
-contains a lot of redundant information, as all  $k^2$ elements are explicitly included, but at most only $\binom{k+1}{2}$ of those elements are distinct. Further, if the matrix is sparse, most of those values are all zero anyway.  Not only do objects that store only the non-zero elements (and pointers to their locations in the matrix) require less memory, but linear algebra operations can be made much faster by taking the sparsity and symmetry into account.
-
-
-do most of the work for ramdon sampling and computing densities.  But the user does have the opportunity/responsibility for doing a little bit of work in advance.  Instead of supplying a dense, symmetric covariance matrix, the user must precompute a Cholesky decomposition of a matrix,  (either a covariance or precision).  For example, suppose
 ```r
-## mu is a numeric vector of length k
-## Sigma is a k x k covariance matrix
-CH <- Matrix::Cholesky(Sigma)
-x <- sparse.rmvn(10, mu, CH, prec=FALSE) ## 10 random draws of x
-d <- sparse.dmvn(A, mu, CH, prec=FALSE) ## densities of the 10 draws
+CH <- Cholesky(as(S, 'dsCMatrix'))
 ```
+Note that you cannot use `chol` instead.  CH is not a matrix, but a structure containing information about a matrix factorization.
+
+
+
+After that, getting MVN random samples, and computing the densities of MVN variates, is straightforward.
+
+```r
+x <- rmvn.sparse(10, mu, CH, prec=FALSE) ## 10 random draws of x
+d <- dmvn.sparse(x, mu, CH, prec=FALSE) ## densities of the 10 draws
+```
+Note that CH was computed only once, but used in two different function calls.
+
+
+If S were a precision matrix instead, the Cholesky step is unchanged, but the `prec` argument in `rmvn.sparse` and `dmvn.sparse` would be TRUE.  By default, `dmvn.sparse` returns a log density, but that can be overridden with a `log=FALSE` argument.

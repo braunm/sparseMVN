@@ -178,8 +178,8 @@ matrix.  If false, it is the decomposition for the covariance matrix.</p></td>
 
     
 
-<p>These functions uses sparse matrix operations to sample from, or compute the
-log density of, a multivariate normal distribution  The user must compute
+<p>These functions use sparse matrix operations to sample from, or compute the
+log density of, a multivariate normal distribution.  The user must compute
 the Cholesky decomposition first, using the Cholesky function in the Matrix
 package.  This function operates on a sparse symmetric matrix, and returns
 an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm
@@ -203,7 +203,9 @@ if pivoting was turned off.</p>
 <span class='r-in'>   <span class='va'>CH</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/Matrix/man/Cholesky.html'>Cholesky</a></span><span class='op'>(</span><span class='va'>V</span><span class='op'>)</span></span>
 <span class='r-in'></span>
 <span class='r-in'>   <span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'>rmvn.sparse</span><span class='op'>(</span><span class='fl'>10</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>,<span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in `?`(pr, ec)</span> no documentation of type ‘pr’ and topic ‘ec’ (or error in processing help)</span>
 <span class='r-in'>   <span class='va'>y</span> <span class='op'>&lt;-</span> <span class='fu'>dmvn.sparse</span><span class='op'>(</span><span class='va'>x</span><span class='op'>[</span><span class='fl'>1</span>,<span class='op'>]</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>, <span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in dmvn.sparse(x[1, ], rep(0, p * m + k), CH, FALSE)</span> object 'x' not found</span>
 <span class='r-in'></span>
 </code></pre></div>
   </div>

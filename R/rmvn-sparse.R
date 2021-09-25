@@ -1,4 +1,5 @@
 ## Copyright (C) 2013-2017 Michael Braun
+#' @rdname rmvn.sparse
 #' @title Multivariate normal functions with sparse covariance/precision matrix.
 #' @aliases dmvn.sparse rmvn.sparse
 #' @description Efficient sampling and density calculation from a multivariate
@@ -14,11 +15,11 @@
 #' matrix.  See details.
 #' @param prec If TRUE, CH is the Cholesky decomposition of the precision
 #' matrix.  If false, it is the decomposition for the covariance matrix.
-#' @param log If TRUE (default), returns the log density, else returns density. 
+#' @param log If TRUE (default), returns the log density, else returns density.
 #'
 #' @section Details:
-#' These functions uses sparse matrix operations to sample from, or compute the
-#' log density of, a multivariate normal distribution  The user must compute
+#' These functions use sparse matrix operations to sample from, or compute the
+#' log density of, a multivariate normal distribution.  The user must compute
 #' the Cholesky decomposition first, using the Cholesky function in the Matrix
 #' package.  This function operates on a sparse symmetric matrix, and returns
 #' an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm
@@ -32,14 +33,14 @@
 #'    m <- 20
 #'    p <- 2
 #'    k <- 4
-#' 
+#'
 #' ## build sample sparse covariance matrix
 #'    Q1 <- tril(kronecker(Matrix(seq(0.1,p,length=p*p),p,p),diag(m)))
 #'    Q2 <- cbind(Q1,Matrix(0,m*p,k))
 #'    Q3 <- rbind(Q2,cbind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
 #'    V <- tcrossprod(Q3)
 #'    CH <- Cholesky(V)
-#' 
+#'
 #'    x <- rmvn.sparse(10,rep(0,p*m+k),CH, FALSE)
 #'    y <- dmvn.sparse(x[1,],rep(0,p*m+k), CH, FALSE)
 #'
@@ -51,28 +52,22 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
     }
 
     k <- length(mu)
-
     if (!(k>0)) {
         stop("mu must have positive length")
     }
-   
     if (!(n>0)) {
         stop("n must be positive")
     }
-
     if (!(k==dim(CH)[1])) {
         stop("dimensions of mu and CH do not conform")
     }
-
-    if (!is.logical(prec)) {
+    if (!is.logical(pr?ec)) {
         stop("prec must be either TRUE or FALSE")
     }
-
     x <- rnorm(n*k)
     dim(x) <- c(k,n)
-
-    A <- expand(CH)
-
+    A <- Matrix::expand(CH)
+browser()
     if (prec) {
         y <- solve(Matrix::t(A$L),x) ## L'y = x
     } else {
@@ -136,4 +131,3 @@ dmvn.sparse <- function(x, mu, CH, prec=TRUE, log=TRUE) {
 
     if (log) return (log.dens) else return (exp(log.dens))
 }
-
