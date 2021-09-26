@@ -17,6 +17,7 @@ reference:
   desc: "The 'workhorse' functions for sampling and computing densities."
   contents:
     - dmvn.sparse
+    - rmvn.sparse
 - title: Data and functions for examples
   desc: "Functions and data used in the vignettes and examples"
   contents:
