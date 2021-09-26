@@ -17,7 +17,7 @@ install_github("braunm/sparseMVN")
 
 # Using the package
 
-To establish some definitions, let $$x\sim MVN(\mu,\Sigma)$$ be a k-dimensional MVN random variate, where $\mu$ is a mean vector, $\Sigma$ is a $k \times k$ covariance matrix, and its inverse, $\Sigma^{-1}$ is the precision matrix.
+To establish some definitions, let $x\sim MVN(\mu,\Sigma)$ be a k-dimensional MVN random variate, where $\mu$ is a mean vector, $\Sigma$ is a $k \times k$ covariance matrix, and its inverse, $\Sigma^{-1}$ is the precision matrix.
 
 When the distinction is unimportant, $\Sigma^*$ will represent  either $\Sigma$ or $\Sigma^{-1}$.
 
