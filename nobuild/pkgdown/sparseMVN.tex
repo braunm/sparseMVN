@@ -64,47 +64,33 @@
   6212 Bishop Blvd.\\
   Dallas, TX 75275\\
   E-mail:  \email{braunm@smu.edu}\\
-  URL:  \url{http://www.smu.edu/Cox/Departments/FacultyDirectory/BraunMichael}
+  URL:  \url{https://braunm.github.io}
 }
 
 
-\Abstract{
-The number of elements in a multivariate normal (MVN) covariance or
-precision matrix grows quadratically in the number of variables.
-Thus, sampling from, and computing densities of, an MVN random variable
-is not scalable when all matrix elements are stored as a dense R matrix, but
-may be when the matrix is sparse, and stored in a suitable compressed
-format.  This package provides standard MVN sampling and density
-algorithms that are optimized for sparse covariance and precision matrices.
-}
+\Abstract{ The number of elements in a covariance or precision matrix grows quadratically in the number of variables.  Thus, sampling from, and computing densities of, a multivariate normal (MVN) random variable is not scalable when all matrix elements are stored as a dense R matrix, but may be when the matrix is sparse, and stored in a suitable compressed format.  This package provides standard MVN sampling and density algorithms that are optimized for sparse covariance and precision matrices.  }
 
-\date{April 7, 2017}
+\date{September 26, 2021}
 
 %% need no \usepackage{Sweave.sty}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
 \begin{document}
 
+\begin{Schunk}
+\begin{Soutput}
+## Warning in system(sprintf("%s %s.sty", kpsewhich(), name), intern = TRUE): running command 'kpsewhich Sweave.sty' had status 1
+\end{Soutput}
+\begin{Soutput}
+## Warning in test_latex_pkg("Sweave", file.path(R.home("share"), "texmf", : unable to find LaTeX package 'Sweave'; will use a copy from knitr
+\end{Soutput}
+\end{Schunk}
 
-
-The \pkg{mvtnorm} package \citep{R_mvtnorm} provides the
-\func{dmvnorm} function to compute the density of a multivariate
-normal (MVN) distributon, and
-the \func{rmvnorm} function to simulate
-MVN random variables.  These functions require the user to supply a
-full, ``dense''
-covariance matrix; if starting with a precision matrix, the user must first invert it explicitly.
-This covariance matrix is
-dense in the sense that, for an $M$-dimensional MVN random
-variable, all $M^2$ elements are stored, so memory
-requirements grow quadratically with the size of the problem.
-Internally, both functions factor the covariance matrix using a
-Cholesky decomposition, whose complexity is
-$\bigO{M^3}$\citep{GolubVanLoan1996}.\footnote{\func{dmvnorm} has options for eigen and
+The \pkg{mvtnorm} package \citep{R_mvtnorm} provides the \func{dmvnorm} function to compute the density of a multivariate normal (MVN) distribution, and the \func{rmvnorm} function to simulate MVN random variables.  These functions require the user to supply a full, ``dense'' covariance matrix; if starting with a precision matrix, the user must first invert it explicitly.  This covariance matrix is dense in the sense that, for an $M$-dimensional MVN random variable, all $M^2$ elements are stored, so memory requirements grow quadratically with the size of the problem.  Internally, both functions factor the covariance matrix using a Cholesky decomposition, whose complexity is $\bigO{M^3}$\citep{GolubVanLoan1996}.\footnote{\func{dmvnorm} has options for eigen and
   singular value decompositions. These are both $\bigO{M^3}$ as well.}  This
 factorization is performed every time the function is called, even if
 the covariance matrix does not
-change from call to call.  Also, \func{rmvnorm} involves
-multiplication of a triangular matrix, and \func{dmvnorm} involves
+change from call to call.  Also, the internal algorithm in \func{rmvnorm} involves
+multiplication of a triangular matrix, and for \func{dmvnorm}, involves
 solving a triangular linear system.  Both of these operations are
 $\bigO{M^2}$ \citep{GolubVanLoan1996} on dense matrices.  MVN
 functions in other packages, such as \pkg{MASS} \citep{R_MASS} and \pkg{LaplacesDemon}
@@ -123,7 +109,7 @@ matrix. The functions in the \pkg{sparseMVN} package exploit that
 sparsity to reduce memory requirements, and to gain computational
 efficiencies.  The \func{dmvn.sparse} function computes the MVN
 density, and the \func{rmvn.sparse} function samples from an MVN
-random variable.  Instead of requiring the
+distribution.  Instead of requiring the
 user to supply a dense covariance matrix, \func{dmvn.sparse} and
 \func{rmvn.sparse} accept a pre-computed Cholesky decomposition of either the
 covariance or precision matrix in a compressed sparse format. This
@@ -132,10 +118,9 @@ approach has several advantages:
 \begin{enumerate}
 \item Memory requirements are smaller because only the nonzero
   elements of the matrix are stored in a compressed sparse format.
-\item Linear algebra algorithms that are optimzed for sparse matrices
+\item Linear algebra algorithms that are optimized for sparse matrices
   are more efficient because they avoid operations on matrix elements that are known to be zero.
-\item When the precision matrix is initially available,
-  there is no need to invert it into a covariance matrix explicitly.
+\item When the precision matrix is initially available, the user can avoid the need to explicitly invert it into a covariance matrix.
   This feature of \pkg{sparseMVN} preserves sparsity, because the inverse of a sparse matrix is
   not necessarily sparse.
 \item The Cholesky factor of the matrix is computed once, before the
@@ -182,16 +167,7 @@ The log probability density of $x$ is
 
 \subsection{MVN density computation and random number generation}\label{sec:algorithms}
 
-The two computationally intensive steps in evaluating $\log f(x)$ are
-computing $\log|\Sigma|$, and $z^\top z$, \emph{without} explicitly
-inverting $\Sigma$ or repeating mathematical operations.  How one
-performs these steps \emph{efficiently} in practice depends on whether the
-covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is
-available. For both cases, we start by finding a lower triangular matrix root:
-$\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$.  Since $\Sigma$
-and $\Sigma^{-1}$ are positive definite, we will use the Cholesky
-decomposition, which is the unique matrix root with all positive
-elements on the diagonal.
+The two computationally intensive steps in evaluating $\log f(x)$ are computing $\log|\Sigma|$, and $z^\top z$, \emph{without} explicitly inverting $\Sigma$ or repeating mathematical operations.  But once we have $z$, computing the dot product $z^\top z$ is cheap. How one these steps \emph{efficiently} in practice depends on whether the covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is available. For both cases, we start by finding a lower triangular matrix root: $\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$.  Since $\Sigma$ and $\Sigma^{-1}$ are positive definite, we will use the Cholesky decomposition, which is the unique matrix root with all positive elements on the diagonal.
 
 With the Cholesky decomposition in hand, we compute the log
 determinant of $\Sigma$ by adding the logs of the diagonal elements of
@@ -219,15 +195,16 @@ matrix. Define a random variable $Z\sim\MVN{0,I_M}$, and generate a realization
 $z$ as a vector of $M$ samples from a standard normal distribution.  If $\Sigma$ is given,
 then evaluate $x=Lz+\mu$.  If $\Sigma^{-1}$ is given, then solve for $x$ in the
 triangular linear system $\Lambda^\top\left(x-\mu\right)=z$. The
-resulting $x$ is a sample from $\MVN{\mu,\Sigma}$.  We confirm the
-mean and covariance of $X$ as follows:
+resulting $x$ is a sample from $\MVN{\mu,\Sigma}$.  The following shows that this approach is correct:
+
  \begin{align}
  \EV{X}&=\EV{LZ+\mu}=\EV{\Lambda^\top Z+\mu}=\mu\\
    \Cov{X}&= \Cov{LZ+\mu}=\EV{LZZ^\top L^\top}=LL^\top=\Sigma\\
-     \Cov{X}&=\Cov{\Lambda^{\top^{-1}}Z+\mu}=\EV{\Lambda^{\top^{-1}}ZZ^\top\Lambda^{-1}}
-     =\Lambda^{\top^{-1}}\Lambda^{-1}=(\Lambda\Lambda^\top)^{-1}=\Sigma
+     \Cov{X}&=\Cov{(\Lambda^\top)^{-1}Z+\mu}=\EV{(\Lambda^\top)^{-1}ZZ^\top\Lambda^{-1}}
+     =(\Lambda^\top)^{-1}\Lambda^{-1}=(\Lambda\Lambda^\top)^{-1}=\Sigma
  \end{align}
 
+ %% CHECK THESE COMPLEXITIES
 These algorithms apply when the covariance/precision matrix is either
 sparse or dense.  When the matrix is dense, the computational
 complexity is $\bigO{M^3}$  for a Cholesky decomposition, and
@@ -280,9 +257,9 @@ Suppose we have a dataset of $N$ households, each with $T$
  $w_i\in\Real{k}$ is a vector of household-specific covariates. Define each
  $p_i$ such that the log odds of $p_i$ is a linear function of
  $\beta_i$ and $w_i$, but does not depend directly on $\beta_j$ and $w_j$ for
- another household $j\neq i$.
+ another household $j\neq i$:
 \begin{align}
-  p_i=\frac{\exp(w_i'\beta_i)}{1+\exp(w_i'\beta_i)},~i=1 ... N
+  p_i=\frac{\exp(w_i'\beta_i)}{1+\exp(w_i'\beta_i)},~i=1,\dots, N
 \end{align}
 
 The coefficient vectors $\beta_i$ are distributed across the population of households
@@ -340,7 +317,7 @@ Now the Hessian has an "banded" sparsity pattern, as in Figure~\ref{fig:banded}.
    \begin{subfigure}[b]{.5\textwidth}
 \begin{Schunk}
 \begin{Soutput}
-
+                             
  [1,] | | . . . . . . . . | |
  [2,] | | . . . . . . . . | |
  [3,] . . | | . . . . . . | |
@@ -360,7 +337,7 @@ Now the Hessian has an "banded" sparsity pattern, as in Figure~\ref{fig:banded}.
 \begin{subfigure}[b]{.5\textwidth}
 \begin{Schunk}
 \begin{Soutput}
-
+                             
  [1,] | . . . . | . . . . | |
  [2,] . | . . . . | . . . | |
  [3,] . . | . . . . | . . | |
@@ -391,7 +368,7 @@ matrices, the reduction in memory requirements by storing the matrix
 in a sparse format can be substantial.\footnote{Because sparse matrix
   structures store row and column indices of the nonzero values, they
   may use more memory than dense storage if the total number of
-  elements is small}. If $N=$1,000, then
+  elements is small}  If $N=1,000$ and $k=2$, then
 $M=$2,002, with more than $4$ million
 elements in the Hessian.  However, only 12,004 of those elements are
 nonzero, with 7,003 unique values in the lower
@@ -401,7 +378,7 @@ while a sparse symmetric matrix of the \class{dsCMatrix} class requires only 91.
 
 This example is relevant because, when evaluated at the posterior
 mode, the Hessian matrix of the log posterior is the MVN precision
-matrix $\Sigma^{-1}$ of a MVN approximatation to
+matrix $\Sigma^{-1}$ of a MVN approximation to
 the posterior distribution of $\left(\beta_{1:N},\mu\right)$. If we
 were to simulate from this MVN using
 \func{rmvnorm}, or evaluate MVN densities using \func{dmvnorm}, we
@@ -416,7 +393,7 @@ The signatures of the \pkg{sparseMVN} key sparse matrix functions are
 
 \begin{Schunk}
 \begin{Sinput}
-rmvn.sparse(n, mu, CH, prec=TRUE)
+rmvn.sparse(n, mu, CH, prec=TRUE, log=TRUE)
 dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
 \end{Sinput}
 \end{Schunk}
@@ -438,8 +415,8 @@ and log densities if \funcarg{log=TRUE}.
       \class{dCHMsuper} object representing the Cholesky decomposition of
       the covariance/precision matrix.\\
   prec&Logical value that identifies CH as the Cholesky decomposition of
-        either a covariance ($\Sigma$, \funcarg{prec=TRUE}) or
-        precision($\Sigma^{-1}$, \funcarg{prec=FALSE}) matrix.\\
+        either a covariance ($\Sigma$, \funcarg{prec=FALSE}) or
+        precision($\Sigma^{-1}$, \funcarg{prec=TRUE}) matrix.\\
   n&Number of random samples to be generated.\\
   log&If \funcarg{log=TRUE}, the log density is returned.\\
  \bottomrule
@@ -580,28 +557,28 @@ conditions.
     &$N$&variables&elements&full&lower tri&sparsity\\
     \midrule
 % latex table generated in R 4.1.0 by xtable 1.8-4 package
-% Fri Sep 24 11:19:18 2021
- \multirow{8}{*}{k=2} & 10 & 22 & 484 & 124 & 73 & 0.256 \\
-   & 20 & 42 & 1,764 & 244 & 143 & 0.138 \\
-   & 50 & 102 & 10,404 & 604 & 353 & 0.058 \\
-   & 100 & 202 & 40,804 & 1,204 & 703 & 0.030 \\
-   & 200 & 402 & 161,604 & 2,404 & 1,403 & 0.015 \\
-   & 300 & 602 & 362,404 & 3,604 & 2,103 & 0.010 \\
-   & 400 & 802 & 643,204 & 4,804 & 2,803 & 0.007 \\
-   & 500 & 1,002 & 1,004,004 & 6,004 & 3,503 & 0.006 \\
+% Sun Sep 26 14:43:18 2021
+ \multirow{8}{*}{k=2} & 10 & 22 & 484 & 124 & 73 & 0.256 \\ 
+   & 20 & 42 & 1,764 & 244 & 143 & 0.138 \\ 
+   & 50 & 102 & 10,404 & 604 & 353 & 0.058 \\ 
+   & 100 & 202 & 40,804 & 1,204 & 703 & 0.030 \\ 
+   & 200 & 402 & 161,604 & 2,404 & 1,403 & 0.015 \\ 
+   & 300 & 602 & 362,404 & 3,604 & 2,103 & 0.010 \\ 
+   & 400 & 802 & 643,204 & 4,804 & 2,803 & 0.007 \\ 
+   & 500 & 1,002 & 1,004,004 & 6,004 & 3,503 & 0.006 \\ 
    \midrule
-\multirow{8}{*}{k=4} & 10 & 44 & 1,936 & 496 & 270 & 0.256 \\
-   & 20 & 84 & 7,056 & 976 & 530 & 0.138 \\
-   & 50 & 204 & 41,616 & 2,416 & 1,310 & 0.058 \\
-   & 100 & 404 & 163,216 & 4,816 & 2,610 & 0.030 \\
-   & 200 & 804 & 646,416 & 9,616 & 5,210 & 0.015 \\
-   & 300 & 1,204 & 1,449,616 & 14,416 & 7,810 & 0.010 \\
-   & 400 & 1,604 & 2,572,816 & 19,216 & 10,410 & 0.007 \\
-   & 500 & 2,004 & 4,016,016 & 24,016 & 13,010 & 0.006 \\
-
+\multirow{8}{*}{k=4} & 10 & 44 & 1,936 & 496 & 270 & 0.256 \\ 
+   & 20 & 84 & 7,056 & 976 & 530 & 0.138 \\ 
+   & 50 & 204 & 41,616 & 2,416 & 1,310 & 0.058 \\ 
+   & 100 & 404 & 163,216 & 4,816 & 2,610 & 0.030 \\ 
+   & 200 & 804 & 646,416 & 9,616 & 5,210 & 0.015 \\ 
+   & 300 & 1,204 & 1,449,616 & 14,416 & 7,810 & 0.010 \\ 
+   & 400 & 1,604 & 2,572,816 & 19,216 & 10,410 & 0.007 \\ 
+   & 500 & 2,004 & 4,016,016 & 24,016 & 13,010 & 0.006 \\ 
+  
 \bottomrule
 \end{tabular}
-\caption{Cases for timing comparision. $N$ and $k$ refer,
+\caption{Cases for timing comparison. $N$ and $k$ refer,
   respectively, to the number of blocks in
   the block-arrow structure (analogous to heterogeneous units in the
   binary choice example), and the size of each block.  The total

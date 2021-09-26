@@ -60,13 +60,13 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
     if (!(k==dim(CH)[1])) {
         stop("dimensions of mu and CH do not conform")
     }
-    if (!is.logical(pr?ec)) {
+    if (!is.logical(prec)) {
         stop("prec must be either TRUE or FALSE")
     }
     x <- rnorm(n*k)
     dim(x) <- c(k,n)
     A <- Matrix::expand(CH)
-browser()
+
     if (prec) {
         y <- solve(Matrix::t(A$L),x) ## L'y = x
     } else {
