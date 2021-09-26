@@ -33,3 +33,5 @@ inst/doc/\.install.extras
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+
+vignettes/theory.*

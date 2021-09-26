@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Multivariate normal functions with sparse covariance/precision matrix. — rmvn.sparse • sparseMVN</title>
+<title>Multivariate normal functions with sparse covariance/precision matrix. — dmvn.sparse • sparseMVN</title>
 
 
 <!-- jquery -->
@@ -39,7 +39,7 @@
 
 
 
-<meta property="og:title" content="Multivariate normal functions with sparse covariance/precision matrix. — rmvn.sparse" />
+<meta property="og:title" content="Multivariate normal functions with sparse covariance/precision matrix. — dmvn.sparse" />
 <meta property="og:description" content="Efficient sampling and density calculation from a multivariate
 normal,
 when the covariance or precision matrix is sparse. These functions are
@@ -142,8 +142,8 @@ designed for MVN samples of very large dimension." />
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Multivariate normal functions with sparse covariance/precision matrix.</h1>
-    <small class="dont-index">Source: <a href='https://github.com/braunm/sparseMVN/blob/master/R/rmvn.sparse.R'><code>R/rmvn.sparse.R</code></a></small>
-    <div class="hidden name"><code>rmvn.sparse.Rd</code></div>
+    <small class="dont-index">Source: <a href='https://github.com/braunm/sparseMVN/blob/master/R/dmvn.sparse.R'><code>R/dmvn.sparse.R</code></a></small>
+    <div class="hidden name"><code>dmvn.sparse.Rd</code></div>
     </div>
 
     <div class="ref-description">
@@ -153,14 +153,14 @@ when the covariance or precision matrix is sparse. These functions are
 designed for MVN samples of very large dimension.</p>
     </div>
 
-    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>rmvn.sparse</span><span class='op'>(</span><span class='va'>n</span>, <span class='va'>mu</span>, <span class='va'>CH</span>, prec <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></code></pre></div>
+    <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>dmvn.sparse</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>mu</span>, <span class='va'>CH</span>, prec <span class='op'>=</span> <span class='cn'>TRUE</span>, log <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></code></pre></div>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>n</th>
-      <td><p>number of samples</p></td>
+      <th>x</th>
+      <td><p>numeric matrix, where each row is an MVN sample.</p></td>
     </tr>
     <tr>
       <th>mu</th>
@@ -176,10 +176,6 @@ matrix.  See details.</p></td>
       <th>prec</th>
       <td><p>If TRUE, CH is the Cholesky decomposition of the precision
 matrix.  If false, it is the decomposition for the covariance matrix.</p></td>
-    </tr>
-    <tr>
-      <th>x</th>
-      <td><p>numeric matrix, where each row is an MVN sample.</p></td>
     </tr>
     <tr>
       <th>log</th>
@@ -203,6 +199,7 @@ if pivoting was turned off.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
     <div class="ref-examples sourceCode"><pre class='sourceCode r'><code><span class='r-in'>   <span class='kw'><a href='https://rdrr.io/r/base/library.html'>require</a></span><span class='op'>(</span><span class='va'><a href='http://Matrix.R-forge.R-project.org/'>Matrix</a></span><span class='op'>)</span></span>
+<span class='r-msg co'><span class='r-pr'>#&gt;</span> Loading required package: Matrix</span>
 <span class='r-in'>   <span class='va'>m</span> <span class='op'>&lt;-</span> <span class='fl'>20</span></span>
 <span class='r-in'>   <span class='va'>p</span> <span class='op'>&lt;-</span> <span class='fl'>2</span></span>
 <span class='r-in'>   <span class='va'>k</span> <span class='op'>&lt;-</span> <span class='fl'>4</span></span>
@@ -214,9 +211,9 @@ if pivoting was turned off.</p>
 <span class='r-in'>   <span class='va'>V</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/Matrix/man/matrix-products.html'>tcrossprod</a></span><span class='op'>(</span><span class='va'>Q3</span><span class='op'>)</span></span>
 <span class='r-in'>   <span class='va'>CH</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/Matrix/man/Cholesky.html'>Cholesky</a></span><span class='op'>(</span><span class='va'>V</span><span class='op'>)</span></span>
 <span class='r-in'></span>
-<span class='r-in'>   <span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'>rmvn.sparse</span><span class='op'>(</span><span class='fl'>10</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>,<span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-in'>   <span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'><a href='rmvn.sparse.html'>rmvn.sparse</a></span><span class='op'>(</span><span class='fl'>10</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>,<span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
 <span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in `?`(pr, ec)</span> no documentation of type ‘pr’ and topic ‘ec’ (or error in processing help)</span>
-<span class='r-in'>   <span class='va'>y</span> <span class='op'>&lt;-</span> <span class='fu'><a href='dmvn.sparse.html'>dmvn.sparse</a></span><span class='op'>(</span><span class='va'>x</span><span class='op'>[</span><span class='fl'>1</span>,<span class='op'>]</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>, <span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
+<span class='r-in'>   <span class='va'>y</span> <span class='op'>&lt;-</span> <span class='fu'>dmvn.sparse</span><span class='op'>(</span><span class='va'>x</span><span class='op'>[</span><span class='fl'>1</span>,<span class='op'>]</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>, <span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
 <span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in dmvn.sparse(x[1, ], rep(0, p * m + k), CH, FALSE)</span> object 'x' not found</span>
 <span class='r-in'></span>
 </code></pre></div>

@@ -4,6 +4,7 @@
 \encoding{UTF-8}
 \name{sparseMVN-package}
 \alias{sparseMVN-package}
+\alias{_PACKAGE}
 \alias{sparseMVN}
 \title{Multivariate Normal Functions for Sparse Covariate and Precision Matrices}
 \description{
@@ -16,5 +17,18 @@ matrix is stored as a sparse Matrix (a dsCMatrix object, as defined
 in the Matrix package.  The user can provide the precision matrix
 directly, rather than convert it to a covariance via matrix
 inversion.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://braunm.github.io/sparseMVN}
+  \item \url{https://github.com/braunm/sparseMVN}
+  \item Report bugs at \url{https://github.com/braunm/sparseMVN/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Michael Braun \email{braunm@smu.edu} (\href{https://orcid.org/0000-0003-4774-2119}{ORCID}) [copyright holder]
+
 }
 \keyword{package}

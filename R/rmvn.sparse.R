@@ -1,7 +1,7 @@
 ## Copyright (C) 2013-2017 Michael Braun
 #' @rdname rmvn.sparse
 #' @title Multivariate normal functions with sparse covariance/precision matrix.
-#' @aliases dmvn.sparse rmvn.sparse
+#' @aliases rmvn.sparse
 #' @description Efficient sampling and density calculation from a multivariate
 #' normal,
 #' when the covariance or precision matrix is sparse. These functions are
@@ -50,7 +50,6 @@ rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
     if (is.na(match(class(CH),c("dCHMsimpl","dCHMsuper")))) {
         stop("CH must be an object of class 'dCHMsimpl' or 'dCHMsuper'")
     }
-
     k <- length(mu)
     if (!(k>0)) {
         stop("mu must have positive length")
@@ -75,59 +74,7 @@ browser()
     }
 
     y <- as(Matrix::crossprod(A$P,y),"matrix") ## P' %*% y
-
     y <- y + mu
-
     return(t(y))
 
-}
-
-#' @rdname rmvn.sparse
-#' @export
-dmvn.sparse <- function(x, mu, CH, prec=TRUE, log=TRUE) {
-
-
-    if (is.vector(x) | (is.atomic(x) & NCOL(x)==1)) {
-        x <- matrix(x,nrow=1)
-    }
-
-    k <- length(mu)
-    n <- NROW(x)
-
-    if (!(k>0)) {
-        stop("mu must have positive length")
-    }
-
-    if (!(k==dim(CH)[1])) {
-        stop("dimensions of mu and CH do not conform")
-    }
-
-    if (k!=NCOL(x)) {
-        stop("x must have same number of columns as the length of mu")
-    }
-
-
-    if (!is.logical(prec)) {
-        stop("prec must be either TRUE or FALSE")
-    }
-
-    A <- expand(CH)
-
-    detL <- sum(log(Matrix::diag(A$L)))
-    C <- -0.918938533204672669541*k ## -k*log(2*pi)/2
-
-
-    xmu <- t(x)-mu
-
-    z <- as.matrix(A$P %*% xmu)
-
-    if (prec) {
-        y <- Matrix::crossprod(A$L,z)  ## L' %*% x
-        log.dens <- C + detL - Matrix::colSums(y*y)/2
-    } else {
-        y <- solve(A$L, z) ## Ly = x
-        log.dens <- C - detL - Matrix::colSums(y*y)/2
-    }
-
-    if (log) return (log.dens) else return (exp(log.dens))
 }

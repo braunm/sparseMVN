@@ -14,5 +14,4 @@
 #' @importFrom stats rnorm
 #' @encoding UTF-8
 #' @keywords package
-NULL
-
+"_PACKAGE"

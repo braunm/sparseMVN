@@ -4,6 +4,15 @@
     <loc>https://braunm.github.io/sparseMVN/404.html</loc>
   </url>
   <url>
+    <loc>https://braunm.github.io/sparseMVN/articles/example1.html</loc>
+  </url>
+  <url>
+    <loc>https://braunm.github.io/sparseMVN/articles/index.html</loc>
+  </url>
+  <url>
+    <loc>https://braunm.github.io/sparseMVN/articles/theory1.html</loc>
+  </url>
+  <url>
     <loc>https://braunm.github.io/sparseMVN/authors.html</loc>
   </url>
   <url>
@@ -14,6 +23,9 @@
   </url>
   <url>
     <loc>https://braunm.github.io/sparseMVN/reference/binary.html</loc>
+  </url>
+  <url>
+    <loc>https://braunm.github.io/sparseMVN/reference/dmvn.sparse.html</loc>
   </url>
   <url>
     <loc>https://braunm.github.io/sparseMVN/reference/index.html</loc>
