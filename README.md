@@ -6,12 +6,12 @@ The [sparseMVN](braunm.github.io/sparseMVN/) package provides standard multivari
 
 The package can be installed from CRAN:
 
-```r
+```
 install.packages("sparseMVN")
 ```
 or from GitHub
 
-```r
+```
 install_github("braunm/sparseMVN")
 ```
 
@@ -32,7 +32,7 @@ The reasons why this is a good strategy are detailed in the vignette, but put si
 
 Here's an example. Suppose mu and S are the mean and covariance of an MVN random variable, and that S is symmetric (obviously) and sparse, but stored as a typical base R matrix. First, the user has to coerce S into a `dsCMatrix` object, which is symmetric, sparse, and column-compressed. Then, the user creates a `CHMsuper` or `CHMsimpl` object containing information about the sparse Cholesky decomposition.
 
-```r
+```
 CH <- Cholesky(as(S, 'dsCMatrix'))
 ```
 Note that you cannot use `chol` instead.  CH is not a matrix, but a structure containing information about a matrix factorization.
@@ -41,7 +41,7 @@ Note that you cannot use `chol` instead.  CH is not a matrix, but a structure co
 
 After that, getting MVN random samples, and computing the densities of MVN variates, is straightforward.
 
-```r
+```
 x <- rmvn.sparse(10, mu, CH, prec=FALSE) ## 10 random draws of x
 d <- dmvn.sparse(x, mu, CH, prec=FALSE) ## densities of the 10 draws
 ```
