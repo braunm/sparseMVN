@@ -1,10 +1,13 @@
 ---
-title: "An R Package for Multivariate Normal Functions with Sparse
-  Covariance and Precision Matrices"
+title: "The sparseMVN package"
 author:
   Michael Braun, Cox School of Business, Southern Methodist University
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{The sparseMVN package}
+  %\VignetteEncoding{UTF-8}
 output:
-  html_document:
+  rmarkdown::html_vignette:
     toc: true
 bibliography:
 - sparseMVN.bib
@@ -40,6 +43,7 @@ options(replace.assign=TRUE,
 
 
 The [mvtnorm] package provides the [dmvnorm] function to compute the density of a multivariate normal (MVN) distribution, and the [rmvnorm] function to simulate MVN random variables. These functions require the user to supply a full, "dense" covariance matrix; if starting with a precision matrix, the user must first invert it explicitly. This covariance matrix is dense in the sense that, for an $M$-dimensional MVN random variable, all $M^2$ elements are stored, so memory requirements grow quadratically with the size of the problem. Internally, both functions factor the covariance matrix using a Cholesky decomposition, whose complexity is $\mathcal{O}\!\left(M^3\right)$[@GolubVanLoan1996].[^1] This factorization is performed every time the function is called, even if the covariance matrix does not change from call to call. Also, the internal algorithm in [rmvnorm] involves multiplication of a triangular matrix, and for [dmvnorm], involves solving a triangular linear system. Both of these operations are $\mathcal{O}\!\left(M^2\right)$ [@GolubVanLoan1996] on dense matrices. MVN functions in other packages, such as [MASS](https://cran.r-project.org/package=MASS) and [LaplacesDemon](https://cran.r-project.org/package=LaplacesDemon) face similar limitations.[^2] Thus, existing tools for working with the MVN distribution in are not practical for high-dimensional MVN random variables.
+
 
 However, for many applications the covariance or precision matrix is sparse, meaning that the proportion of nonzero elements is small, relative to the total size of the matrix. The functions in the [sparseMVN] package exploit that sparsity to reduce memory requirements, and to gain computational efficiencies. The `dmvn.sparse()` function computes the MVN density, and the `rmvn.sparse()` function samples from an MVN distribution. Instead of requiring the user to supply a dense covariance matrix, `rmvn.sparse()` and `dmvn.sparse()` accept a pre-computed Cholesky decomposition of either the covariance or precision matrix in a compressed sparse format. This approach has several advantages:
 
@@ -140,9 +144,9 @@ options(scipen=999)
 
 
 
-The sparsity pattern depends on how the variables are ordered. One such ordering is to group all of the coefficients in the $\beta_i$ for each unit together, and place $\mu$ at the end. $$\begin{aligned} \beta_{11},\dotsc,\beta_{1k},\beta_{21},\dotsc,\beta_{2k},~\dotsc~,\beta_{N1},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k\end{aligned}$$ In this case, the Hessian has a "block-arrow" pattern. Figure BLOCKARROW illustrates this pattern for $N=`r scales::comma(N)`$ and $k=`r k`$ (`r nv1` total variables).
+The sparsity pattern depends on how the variables are ordered. One such ordering is to group all of the coefficients in the $\beta_i$ for each unit together, and place $\mu$ at the end. $$\begin{aligned} \beta_{11},\dotsc,\beta_{1k},\beta_{21},\dotsc,\beta_{2k},~\dotsc~,\beta_{N1},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k\end{aligned}$$ In this case, the Hessian has a "block-arrow" pattern. This figure illustrates this pattern for $N=`r scales::comma(N)`$ and $k=`r k`$ (`r nv1` total variables).
 
-```{r blackarrow, results="asis"}
+```{r blockarrow, results="asis"}
 Mat1a <- as(kronecker(diag(N), matrix(1, k, k)),"sparseMatrix")
 Mat1a <- rbind(Mat1a, Matrix(1, p, N*k))
 Mat1a <- cbind(Mat1a, Matrix(1, k*N+p, p))
@@ -159,11 +163,7 @@ tmp_a %>%
 
 ```
 
-
-
-Another possibility is to group coefficients for each covariate together. $$\begin{aligned} \beta_{11},\dotsc,\beta_{N1},\beta_{12},\dotsc,\beta_{N2},~\dotsc~,\beta_{1k},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k\end{aligned}$$ Now the Hessian has an \"banded\" sparsity pattern, as in Figure BANDED.
-
-
+Another possibility is to group coefficients for each covariate together. $$\begin{aligned} \beta_{11},\dotsc,\beta_{N1},\beta_{12},\dotsc,\beta_{N2},~\dotsc~,\beta_{1k},\dotsc,\beta_{Nk},\mu_1,\dotsc,\mu_k\end{aligned}$$ Now the Hessian has an \"banded\" sparsity pattern:
 
 ```{r, banded, echo=FALSE,results="asis"}
 Mat1b <- kronecker(Matrix(1, k, k), diag(N))
@@ -192,8 +192,7 @@ A2 <- as(Mat2,"matrix")
 ```
 
 
-
-In both cases, the number of nonzeros is the same.  There are `r nels1` elements in this symmetric matrix.  If the matrix is stored in the standard \pkg{base} \proglang{R} dense format, memory is reserved for all `r nels1` values, even though only `r nnz1` values are nonzero, and only `r nnz1LT` values are unique. For larger matrices, the reduction in memory requirements by storing the matrix in a sparse format can be substantial.\footnote{Because sparse matrix
+In both cases, the number of nonzeros is the same.  There are `r nels1` elements in this symmetric matrix.  If the matrix is stored in the standard base R dense format, memory is reserved for all `r nels1` values, even though only `r nnz1` values are nonzero, and only `r nnz1LT` values are unique. For larger matrices, the reduction in memory requirements by storing the matrix in a sparse format can be substantial.\footnote{Because sparse matrix
   structures store row and column indices of the nonzero values, they
   may use more memory than dense storage if the total number of
   elements is small}  If $N=`r scales::comma(Q)`$ and $k=`r k`$, then
@@ -253,12 +252,7 @@ opt <- trustOptim::trust.optim(start,
 ```
 
 
-
-
-
-
-
-The calls to trustOptim::trust.optim()  return the posterior mode, and the Hessian evaluated at the
+The calls to `trustOptim::trust.optim()`  return the posterior mode, and the Hessian evaluated at the
 mode. These results serve as the mean and the negative precision of the
 MVN approximation to the posterior distribution of the model.
 
@@ -290,18 +284,16 @@ the Hessian.
 
 ```r
 Matrix::nnzero(H)
-Hinv <- drop0(solve(H))
+Hinv <- Matrix::drop0(solve(H))
 Matrix::nnzero(Hinv)
 ```
-
-
 
 Nevertheless, we should check that the log densities from dmvn.sparse() correspond to
 those that we would get from [dmvnorm].
 
 
 ```r
-logf_dense <- dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
+logf_dense <- mvtnorm::dmvnorm(samples, pm, as.matrix(Hinv), log=TRUE)
 all.equal(logf, logf_dense)
 ```
 
@@ -311,19 +303,16 @@ load("runtimes.Rdata")
 
 ```{r, echo=FALSE}
 tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
-    group_by(N, k, stat, pattern, type) %>%
-    summarize(mean_ms=mean(time/1000000),
-              sd_ms=sd(time/1000000)) %>%
-    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
-    reshape2::dcast(N+k+stat+time~pattern+type)
+  group_by(N, k, stat, pattern, type) %>%
+  summarize(mean_ms=mean(time/1000000)) %>%
+  ungroup() %>%
+  pivot_wider(names_from = c(pattern, type), values_from = mean_ms)
 
-
-tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
-    group_by(N, k, stat, pattern, type) %>%
-    summarize(mean_ms=mean(time/1000000),
-              sd_ms=sd(time/1000000)) %>%
-    tidyr::gather(time, value, c(mean_ms, sd_ms)) %>%
-    reshape2::dcast(N+k+time~stat+pattern)
+tab2 <- as_tibble(runtimes) %>%
+  filter(stat %in% c("chol","solve")) %>%
+  group_by(N, k, stat, pattern, type) %>%
+  summarize(mean_ms=mean(time/1000000)) %>%
+  pivot_wider(names_from = c(stat, pattern), values_from = mean_ms)
 ```
 
 
@@ -332,8 +321,6 @@ tab2 <- filter(runtimes, stat %in% c("chol","solve")) %>%
 
 In this section we show the efficiency gains from sparseMVN by comparing the run times between rmvn.sparse() and [rmvnorm], and between dmvn.sparse() and [dmvnorm] . In these tests, we construct covariance/precision matrices with the same structure as the Hessian of the log posterior density of the example model in Section [2.1](#sec:example){reference-type="ref" reference="sec:example"}.  Parameters are ordered such that the matrix has a [block-arrow pattern](#blockarrow).
 
-<!-- as in Figure [\[fig:blockarrow\]](#fig:blockarrow){reference-type="ref" reference="fig:blockarrow"}.  -->
-as in Figure [\[fig:blockarrow\]](#fig:blockarrow)
 
 The size and sparsity of the test matrices vary through manipulation of the number of blocks ($N$), the size of each block ($k$), and the number of rows/columns in the margin (also $k$). Each test matrix has $(N+1)k$ rows and columns.  Table [2](#tab:cases){reference-type="ref" reference="tab:cases"} summarizes the case conditions.
 
@@ -353,8 +340,8 @@ cases %>%
 
 
 ```{r, echo=FALSE}
-tmp <- filter(tab1, N==min(tab1[['N']]) & k==min(tab1[['k']])
-              & time=="mean_ms" & stat=="density")
+tmp <- dplyr::filter(tab1, N==min(tab1[['N']]), k==min(tab1[['k']]),
+              stat=="density")
 sm <- with(tmp, c(dense_cov,sparse_cov))
 ```
 
@@ -364,8 +351,8 @@ MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
 [dmvnorm] and [rmvnorm].  Times were collected over 200 replications on a
   2013-vintage Mac Pro with a 12-core 2.7 GHz Intel Xeon E5 processor
   and 64 GB of RAM.
-  The times for \pkg{mvtnorm} are faster than
-  \pkg{sparseMVN} for low dimensional cases ($N\leq 50$), but grow
+  The times for [mvtnorm] are faster than
+  [sparseMVN] for low dimensional cases ($N\leq 50$), but grow
   quadratically in the number of variables.\footnote{As an example, in
     the $N=`r min(tab1[['N']])`$, $k=`r min(tab1[['k']])`$ case, the mean time to compute 1,000 MVN
     densities is `r format(sm[1],digits=2)` ms using [dmvnorm], but more
@@ -380,10 +367,12 @@ MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
 
 
 ```{r, echo=FALSE, fig.height=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and dmvn.sparse(), while random samples were generated using [rmvnorm] and rmvn.sparse()."}
-DF1 <- filter(tab1, time=="mean_ms") %>%
-    mutate(stat=plyr::revalue(stat, c(density="density", rand="random"))) %>%
-    rename(dense=dense_cov, sparse=sparse_cov) %>%
-  tidyr::gather(pattern, value, c(dense, sparse))
+
+DF1 <- tab1 %>%
+  mutate(stat=fct_recode(stat, random='rand')) %>%
+  rename(dense=dense_cov, sparse=sparse_cov) %>%
+  pivot_longer(cols=c(dense, sparse), names_to='pattern', values_to='value')
+
 
 P1 <- ggplot(DF1, aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) +
   geom_line() +
@@ -407,21 +396,19 @@ fig.cap="Computation time for Cholesky decomposition of sparse and dense matrice
 
 
 ```{r, DF2, echo=FALSE, fig.keep='all'}
-DF2 <- filter(tab2, time=="mean_ms") %>%
+
+DF2 <- tab2 %>%
     rename(`dense inversion`=solve_dense,
            `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
-  tidyr::gather(pattern, value, c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`))
+  pivot_longer(cols=c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`),
+               names_to = 'pattern', values_to = 'value')
+
 
 P2 <- ggplot(DF2, aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) +
   geom_line() +
   geom_point(size=2) +
   scale_x_continuous("Number of blocks (N)") +
   scale_y_continuous("Computation time (milliseconds)", labels=scales::comma) +
-  scale_color_manual("Pattern/Operation",
-                         values=c(`dense Cholesky`='red', `sparse Cholesky`='blue',
-                                  `dense inversion`='black')) %>%
-  scale_shape("Pattern/Operation") +
-  scale_linetype("Pattern/Operation") +
   facet_grid(.~k, scales="free_y", labeller=label_bquote(cols = k==.(k))) +
   theme_bw() +
   theme(strip.background=element_rect(fill='white'))

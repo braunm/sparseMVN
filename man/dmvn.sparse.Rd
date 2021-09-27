@@ -2,7 +2,7 @@
 % Please edit documentation in R/dmvn-sparse.R
 \name{dmvn.sparse}
 \alias{dmvn.sparse}
-\title{Multivariate normal functions with sparse covariance/precision matrix.}
+\title{Compute density  from multivariate normal distribution}
 \usage{
 dmvn.sparse(x, mu, CH, prec = TRUE, log = TRUE)
 }
@@ -20,16 +20,16 @@ matrix.  If false, it is the decomposition for the covariance matrix.}
 
 \item{log}{If TRUE (default), returns the log density, else returns density.}
 }
+\value{
+A density or log density for each row of x
+}
 \description{
-Efficient sampling and density calculation from a multivariate
-normal,
-when the covariance or precision matrix is sparse. These functions are
-designed for MVN samples of very large dimension.
+Compute density  from multivariate normal distribution
 }
 \section{Details}{
 
-These functions use sparse matrix operations to sample from, or compute the
-log density of, a multivariate normal distribution.  The user must compute
+This function use sparse matrix operations to compute the
+log density of a multivariate normal distribution.  The user must compute
 the Cholesky decomposition first, using the Cholesky function in the Matrix
 package.  This function operates on a sparse symmetric matrix, and returns
 an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm

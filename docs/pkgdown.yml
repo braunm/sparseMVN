@@ -3,7 +3,7 @@ pkgdown: 1.6.1.9001
 pkgdown_sha: aac98c389188c22dfa3d8de78462e19e8b8da0cc
 articles:
   sparseMVN2: sparseMVN2.html
-last_built: 2021-09-27T01:21Z
+last_built: 2021-09-27T03:39Z
 urls:
   reference: https://braunm.github.io/sparseMVN/reference
   article: https://braunm.github.io/sparseMVN/articles

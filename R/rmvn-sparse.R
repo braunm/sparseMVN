@@ -1,25 +1,21 @@
 ## Copyright (C) 2013-2017 Michael Braun
 #' @rdname rmvn.sparse
-#' @title Multivariate normal functions with sparse covariance/precision matrix.
+#' @title Sample from multivariate normal distribution
 #' @aliases rmvn.sparse
 #' @description Efficient sampling and density calculation from a multivariate
 #' normal,
 #' when the covariance or precision matrix is sparse. These functions are
 #' designed for MVN samples of very large dimension.
-#'
 #' @param n number of samples
-#' @param x numeric matrix, where each row is an MVN sample.
 #' @param mu mean (numeric vector)
 #' @param CH An object of class dCHMsimpl or dCHMsuper that represents
 #' the Cholesky factorization of either the precision (default) or covariance
 #' matrix.  See details.
 #' @param prec If TRUE, CH is the Cholesky decomposition of the precision
 #' matrix.  If false, it is the decomposition for the covariance matrix.
-#' @param log If TRUE (default), returns the log density, else returns density.
-#'
+#' @return A matrix of samples from an MVN distribution (one in each row)
 #' @section Details:
-#' These functions use sparse matrix operations to sample from, or compute the
-#' log density of, a multivariate normal distribution.  The user must compute
+#' This function uses sparse matrix operations to sample from a multivariate normal distribution.  The user must compute
 #' the Cholesky decomposition first, using the Cholesky function in the Matrix
 #' package.  This function operates on a sparse symmetric matrix, and returns
 #' an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm

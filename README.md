@@ -58,4 +58,4 @@ The counterpart  MVN functions for base "dense" R matrices are `mvtnorm::rmvnorm
 
 # Learn more
 
-A more detailed vignette explains the theory behind the package, and shows evidence of scalability.
+A more detailed `vignette("sparseMVN2")` explains the theory behind the package, and shows evidence of scalability.
