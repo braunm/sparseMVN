@@ -110,10 +110,7 @@ designed for MVN samples of very large dimension." />
   </a>
   <ul class="dropdown-menu" role="menu">
     <li>
-      <a href="../articles/example1.html">An example with a sparse Hessian</a>
-    </li>
-    <li>
-      <a href="../articles/theory1.html">sparseMVN: The Theory</a>
+      <a href="../articles/sparseMVN2.html">An R Package for Multivariate Normal Functions with Sparse Covariance and Precision Matrices</a>
     </li>
   </ul>
 </li>
@@ -142,7 +139,7 @@ designed for MVN samples of very large dimension." />
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Multivariate normal functions with sparse covariance/precision matrix.</h1>
-    <small class="dont-index">Source: <a href='https://github.com/braunm/sparseMVN/blob/master/R/dmvn.sparse.R'><code>R/dmvn.sparse.R</code></a></small>
+    <small class="dont-index">Source: <a href='https://github.com/braunm/sparseMVN/blob/master/R/dmvn-sparse.R'><code>R/dmvn-sparse.R</code></a></small>
     <div class="hidden name"><code>dmvn.sparse.Rd</code></div>
     </div>
 
@@ -212,9 +209,7 @@ if pivoting was turned off.</p>
 <span class='r-in'>   <span class='va'>CH</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/pkg/Matrix/man/Cholesky.html'>Cholesky</a></span><span class='op'>(</span><span class='va'>V</span><span class='op'>)</span></span>
 <span class='r-in'></span>
 <span class='r-in'>   <span class='va'>x</span> <span class='op'>&lt;-</span> <span class='fu'><a href='rmvn.sparse.html'>rmvn.sparse</a></span><span class='op'>(</span><span class='fl'>10</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>,<span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
-<span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in `?`(pr, ec)</span> no documentation of type ‘pr’ and topic ‘ec’ (or error in processing help)</span>
 <span class='r-in'>   <span class='va'>y</span> <span class='op'>&lt;-</span> <span class='fu'>dmvn.sparse</span><span class='op'>(</span><span class='va'>x</span><span class='op'>[</span><span class='fl'>1</span>,<span class='op'>]</span>,<span class='fu'><a href='https://rdrr.io/r/base/rep.html'>rep</a></span><span class='op'>(</span><span class='fl'>0</span>,<span class='va'>p</span><span class='op'>*</span><span class='va'>m</span><span class='op'>+</span><span class='va'>k</span><span class='op'>)</span>, <span class='va'>CH</span>, <span class='cn'>FALSE</span><span class='op'>)</span></span>
-<span class='r-err co'><span class='r-pr'>#&gt;</span> <span class='error'>Error in dmvn.sparse(x[1, ], rep(0, p * m + k), CH, FALSE)</span> object 'x' not found</span>
 <span class='r-in'></span>
 </code></pre></div>
   </div>
