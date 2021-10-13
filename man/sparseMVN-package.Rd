@@ -21,9 +21,9 @@ inversion.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://braunm.github.io/sparseMVN}
-  \item \url{https://github.com/braunm/sparseMVN}
-  \item Report bugs at \url{https://github.com/braunm/sparseMVN/issues}
+  \item \url{https://braunm.github.io/sparseMVN/}
+  \item \url{https://github.com/braunm/sparseMVN/}
+  \item Report bugs at \url{https://github.com/braunm/sparseMVN/issues/}
 }
 
 }

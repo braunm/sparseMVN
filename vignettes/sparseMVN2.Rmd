@@ -19,7 +19,10 @@ date: September 26, 2021
 suppressPackageStartupMessages(library("sparseMVN"))
 suppressPackageStartupMessages(library("Matrix"))
 suppressPackageStartupMessages(library("mvtnorm"))
-suppressPackageStartupMessages(library("tidyverse"))
+suppressPackageStartupMessages(library("ggplot2"))
+suppressPackageStartupMessages(library("dplyr"))
+suppressPackageStartupMessages(library("tidyr"))
+suppressPackageStartupMessages(library("forcats"))
 suppressPackageStartupMessages(library("kableExtra"))
 
 knitr::opts_chunk$set(prompt=TRUE, cache=FALSE,error=FALSE,
@@ -30,9 +33,9 @@ options(replace.assign=TRUE,
 ```
 
 [Matrix]:  https://CRAN.R-project.org/package=Matrix
-[sparseMVN]: https://braunm.github.io/sparseMVN
-[sparseHessianFD]: https://braunm.github.io/sparseHessianFD
-[trustOptim]: https://braunm.github.io/trustOptim
+[sparseMVN]: https://braunm.github.io/sparseMVN/
+[sparseHessianFD]: https://braunm.github.io/sparseHessianFD/
+[trustOptim]: https://braunm.github.io/trustOptim/
 [rmvnorm]: https://rdrr.io/pkg/mvtnorm/man/Mvnorm.html
 [dmvnorm]: https://rdrr.io/pkg/mvtnorm/man/Mvnorm.html
 [mvtnorm]: https://cran.r-project.org/package=mvtnorm
@@ -303,16 +306,16 @@ load("runtimes.Rdata")
 
 ```{r, echo=FALSE}
 tab1 <- filter(runtimes, stat %in% c("density","rand")) %>%
-  group_by(N, k, stat, pattern, type) %>%
-  summarize(mean_ms=mean(time/1000000)) %>%
-  ungroup() %>%
-  pivot_wider(names_from = c(pattern, type), values_from = mean_ms)
+  dplyr::group_by(N, k, stat, pattern, type) %>%
+  dplyr::summarize(mean_ms=mean(time/1000000)) %>%
+  dplyr::ungroup() %>%
+  tidyr::pivot_wider(names_from = c(pattern, type), values_from = mean_ms)
 
 tab2 <- as_tibble(runtimes) %>%
-  filter(stat %in% c("chol","solve")) %>%
-  group_by(N, k, stat, pattern, type) %>%
-  summarize(mean_ms=mean(time/1000000)) %>%
-  pivot_wider(names_from = c(stat, pattern), values_from = mean_ms)
+  dplyr::filter(stat %in% c("chol","solve")) %>%
+  dplyr::group_by(N, k, stat, pattern, type) %>%
+  dplyr::summarize(mean_ms=mean(time/1000000)) %>%
+  tidyr::pivot_wider(names_from = c(stat, pattern), values_from = mean_ms)
 ```
 
 
@@ -369,9 +372,9 @@ MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
 ```{r, echo=FALSE, fig.height=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and dmvn.sparse(), while random samples were generated using [rmvnorm] and rmvn.sparse()."}
 
 DF1 <- tab1 %>%
-  mutate(stat=fct_recode(stat, random='rand')) %>%
-  rename(dense=dense_cov, sparse=sparse_cov) %>%
-  pivot_longer(cols=c(dense, sparse), names_to='pattern', values_to='value')
+  dplyr::mutate(stat=forcats::fct_recode(stat, random='rand')) %>%
+  dplyr::rename(dense=dense_cov, sparse=sparse_cov) %>%
+  tidyr::pivot_longer(cols=c(dense, sparse), names_to='pattern', values_to='value')
 
 
 P1 <- ggplot(DF1, aes(x=N, y=value, color=pattern, shape=pattern, linetype=pattern)) +
@@ -398,9 +401,9 @@ fig.cap="Computation time for Cholesky decomposition of sparse and dense matrice
 ```{r, DF2, echo=FALSE, fig.keep='all'}
 
 DF2 <- tab2 %>%
-    rename(`dense inversion`=solve_dense,
+    dplyr::rename(`dense inversion`=solve_dense,
            `dense Cholesky`=chol_dense, `sparse Cholesky`=chol_sparse) %>%
-  pivot_longer(cols=c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`),
+  tidyr::pivot_longer(cols=c(`dense inversion`,`sparse Cholesky`,`dense Cholesky`),
                names_to = 'pattern', values_to = 'value')
 
 

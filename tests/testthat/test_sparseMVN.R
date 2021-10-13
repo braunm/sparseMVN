@@ -3,7 +3,7 @@ context("sparseMVN")
 
 test_that("sparseMVN", {
 
-    require(mvtnorm)
+
     set.seed(123)
     N <- 10 ## number of samples
     m <- 15  ## number of blocks in sparse covariance matrix
@@ -48,9 +48,12 @@ test_that("sparseMVN", {
             mat <- CV.base
         }
 
-        ## computing log densities using dmvnorm
-        d.dns <- dmvnorm(x.sp, mu, mat, log=TRUE)
-        expect_equal(d.sp, d.dns)
+        if(require("mvtnorm")) {
+          ## computing log densities using dmvnorm
+          d.dns <- mvtnorm::dmvnorm(x.sp, mu, mat, log=TRUE)
+          expect_equal(d.sp, d.dns)
+        }
+
     }
 
 
