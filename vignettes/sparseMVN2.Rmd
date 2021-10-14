@@ -124,7 +124,7 @@ $$\begin{aligned}
   -\frac{1}{2}\left(\beta_i-\mu\right)^\top\mathbf{A}^{-1}\left(\beta_i-\mu\right)\right)
 -\frac{1}{2}\mu^\top\mathbf{\Omega}^{-1}\mu\end{aligned}$$
 
-Because one element of $\beta_i$ can be correlated with another element of $\beta_i$ (for the same unit), we allow for the cross-partials between elements of $\beta_i$ for any $i$ to be nonzero. Also, because the mean of each $\beta_i$ depends on $\mu$, the cross-partials between $\mu$ and any $\beta_i$ can be nonzero. However, since the $\beta_i$ and $\beta_j$ are independent samples, and the $y_i$ are conditionally independent, the cross-partial derivatives between an element of $\beta_i$ and any element of any $\beta_j$ for $j\neq i$, must be zero.  When $N$ is much greater than $k$, there will be many more zero cross-partial derivatives than nonzero, and the Hessian of the log posterior density will be sparse.
+Because one element of $\beta_i$ can be correlated with another element of $\beta_i$ (for the same unit), we allow for the cross-partials between elements of $\beta_i$ for any $i$ to be nonzero. Also, because the mean of each $\beta_i$ depends on $\mu$, the cross-partials between $\mu$ and any $\beta_i$ can be nonzero. However, since the  uild$\beta_i$ and $\beta_j$ are independent samples, and the $y_i$ are conditionally independent, the cross-partial derivatives between an element of $\beta_i$ and any element of any $\beta_j$ for $j\neq i$, must be zero.  When $N$ is much greater than $k$, there will be many more zero cross-partial derivatives than nonzero, and the Hessian of the log posterior density will be sparse.
 
 
 ```{r, echo=FALSE}
@@ -369,7 +369,7 @@ MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
 
 
 
-```{r, echo=FALSE, fig.height=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and dmvn.sparse(), while random samples were generated using [rmvnorm] and rmvn.sparse()."}
+```{r, echo=FALSE, fig.width=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and dmvn.sparse(), while random samples were generated using [rmvnorm] and rmvn.sparse()."}
 
 DF1 <- tab1 %>%
   dplyr::mutate(stat=forcats::fct_recode(stat, random='rand')) %>%
@@ -395,10 +395,10 @@ print(P1)
 
 The sparseMVN functions always require a sparse Cholesky decomposition of the covariance or precision matrix, and the [mvtnorm] functions require a dense precision matrix to be inverted into a dense covariance matrix. Figure [2](#fig:cholSolve){reference-type="ref" reference="fig:cholSolve"} compares the computation times of these preparatory steps. There are three cases to consider: inverting a dense matrix using the solve() function, decomposing a sparse matrix using Matrix::Cholesky(), and decomposing a dense matrix using chol(). Applying chol() to a dense function is not a required operation in advance of calling [dmvnorm] or [rmvnorm], but those functions will invoke some kind of decomposition internally. We include it in our comparison because it comprises a substantial part of the computation time. The decomposition and inversion operations on the dense matrices grow cubically as the size of the matrix increases. The sparse Cholesky decomposition time is negligible. For example, the mean run time for the $N=500$, $k=4$ case is about 0.39 ms.
 
-fig.cap="Computation time for Cholesky decomposition of sparse and dense matrices, and inversion of dense matrices."
 
 
-```{r, DF2, echo=FALSE, fig.keep='all'}
+
+```{r, DF2, echo=FALSE, fig.width=5, fig.keep='all', fig.cap="Computation time for Cholesky decomposition of sparse and dense matrices, and inversion of dense matrices."}
 
 DF2 <- tab2 %>%
     dplyr::rename(`dense inversion`=solve_dense,

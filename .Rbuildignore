@@ -4,7 +4,7 @@
 ^\\.Rbuildignore$
 ^\\.Rhistory$
 ^\\.gitignore$
-^\\.DS\_Store
+^\\.DS_Store
 README\.md
 inst/old/*
 data-raw/*
