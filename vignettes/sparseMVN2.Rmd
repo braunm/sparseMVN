@@ -7,11 +7,12 @@ vignette: >
   %\VignetteIndexEntry{The sparseMVN package}
   %\VignetteEncoding{UTF-8}
 output:
-  rmarkdown::html_vignette:
-    toc: true
+    bookdown::html_document2:
+      base_format: rmarkdown::html_vignette
+      toc: true
 bibliography:
 - sparseMVN.bib
-date: September 26, 2021
+date: October 26, 2021
 ---
 
 
@@ -43,22 +44,34 @@ options(replace.assign=TRUE,
 [dCHMsimpl]: https://rdrr.io/cran/Matrix/man/CHMfactor-class.html
 [dCHMsuper]: https://rdrr.io/cran/Matrix/man/CHMfactor-class.html
 [Cholesky()]: https://rdrr.io/cran/Matrix/man/Cholesky.html
+[dmvn.sparse()]: http://braunm.github.io/sparseMVN/reference/dmvn.sparse.html
+[rmvn.sparse()]: http://braunm.github.io/sparseMVN/reference/rmvn.sparse.html
+[chol()]: https://rdrr.io/r/base/chol.html
+[solve()]: https://rdrr.io/r/base/solve.html
 
 
-The [mvtnorm] package provides the [dmvnorm] function to compute the density of a multivariate normal (MVN) distribution, and the [rmvnorm] function to simulate MVN random variables. These functions require the user to supply a full, "dense" covariance matrix; if starting with a precision matrix, the user must first invert it explicitly. This covariance matrix is dense in the sense that, for an $M$-dimensional MVN random variable, all $M^2$ elements are stored, so memory requirements grow quadratically with the size of the problem. Internally, both functions factor the covariance matrix using a Cholesky decomposition, whose complexity is $\mathcal{O}\!\left(M^3\right)$[@GolubVanLoan1996].[^1] This factorization is performed every time the function is called, even if the covariance matrix does not change from call to call. Also, the internal algorithm in [rmvnorm] involves multiplication of a triangular matrix, and for [dmvnorm], involves solving a triangular linear system. Both of these operations are $\mathcal{O}\!\left(M^2\right)$ [@GolubVanLoan1996] on dense matrices. MVN functions in other packages, such as [MASS](https://cran.r-project.org/package=MASS) and [LaplacesDemon](https://cran.r-project.org/package=LaplacesDemon) face similar limitations.[^2] Thus, existing tools for working with the MVN distribution in are not practical for high-dimensional MVN random variables.
+The [sparseMVN] package consists of two user-facing functions:  [dmvn.sparse] computes the density of a multivariate normal (MVN) distribution, and [rmvn.sparse] samples from an MVN distribution.  Unlike MVN functions provided by the [mvtnorm] and [MASS] packages, which take a dense representation of a full covariance matrix as one of the arguments, the [sparseMVN] functions ask for a **sparse** Cholesky decomposition of **either** the covariance or precision matrix. When the dimension of the MVN random variable is large, and the true covariance is itself sparse (i.e., the proportion of nonzero elements is small), [sparseMVN] offers the following advantages.
+
+1. Memory use and computation time in matrix operations:  A dense matrix in R stores all $M^2$ elements, even if the matrix is symmetric, and even when a small proportion of elements are nonzero.  Thus, memory requirements grow quadratically with the size of the problem.  Further,  dense Cholesky factorization is a $\mathcal{O}\!\left(M^3\right)$ operation, while multiplication of a triangular matrix with a dense matrix, and solving dense triangular systems, are $\mathcal{O}\!\left(M^2\right)$ [@GolubVanLoan1996].  [sparseMVN] replies on classes from the [Matrix] package that compresses sparse matrices into an efficient structure for storage, and provides  optimized algorithms for operations on those matrices.  So, working with MVN distributions becomes more scalable when the covariance or precision matrix is actually sparse.  The reasons are that only nonzero elements are stored explicitly, and redundant multiplications with zero are avoided.
+
+2. Avoiding explicit inversion of a precision matrix.  In many applications (e.g., sampling from a Laplace approximation), the user starts with a sparse precision matrix rather than a covariance.  Using extant  MVN functions in R requires the user to explicitly invert the precision matrix, which itself can be an expensive step, with no guarantee of sparsity afterward.   But this inversion step is not mathematically necessary; computation of MVN densities and random variates can be done just as easily and directly with the precision matrix.  At the user's option, [sparseMVN] accepts a factor of either a sparse covariance or precision matrix.
+
+3.  Multiple-use Cholesky factorization.  MVN computation involves computing the Cholesky factor of the matrix (either covariance or precision).  Most MVN functions do this internally (so the user does not have to worry about it)  every time the function is called (which is wasteful if the matrix does not change from call to call).  [sparseMVN] requires the user to perform this step separately with `Matrix::Cholesky()`.  While this feature does impose one additional step on the user, it also allows the user to reuse the same factor when possible.
 
 
-However, for many applications the covariance or precision matrix is sparse, meaning that the proportion of nonzero elements is small, relative to the total size of the matrix. The functions in the [sparseMVN] package exploit that sparsity to reduce memory requirements, and to gain computational efficiencies. The `dmvn.sparse()` function computes the MVN density, and the `rmvn.sparse()` function samples from an MVN distribution. Instead of requiring the user to supply a dense covariance matrix, `rmvn.sparse()` and `dmvn.sparse()` accept a pre-computed Cholesky decomposition of either the covariance or precision matrix in a compressed sparse format. This approach has several advantages:
 
-1.  Memory requirements are smaller because only the nonzero elements of the matrix are stored in a compressed sparse format.
 
-2.  Linear algebra algorithms that are optimized for sparse matrices are more efficient because they avoid operations on matrix elements that are known to be zero.
+<!-- However, for many applications the covariance or precision matrix is sparse, meaning that the proportion of nonzero elements is small, relative to the total size of the matrix. The functions in the [sparseMVN] package exploit that sparsity to reduce memory requirements, and to gain computational efficiencies. The [dmvn.sparse] function computes the MVN density, and the [rmvn.sparse] function samples from an MVN distribution. Instead of requiring the user to supply a dense covariance matrix, [rmvn.sparse] and [dmvn.sparse] accept a pre-computed Cholesky decomposition of either the covariance or precision matrix in a compressed sparse format. This approach has several advantages: -->
 
-3.  When the precision matrix is initially available, the user can avoid the need to explicitly invert it into a covariance matrix. This feature of preserves sparsity, because the inverse of a sparse matrix is not necessarily sparse.
+<!-- 1.  Memory requirements are smaller because only the nonzero elements of the matrix are stored in a compressed sparse format. -->
 
-4.  The Cholesky factor of the matrix is computed once, before the first function call, and is not repeated with subsequent calls (as long as the matrix does not change).
+<!-- 2.  Linear algebra algorithms that are optimized for sparse matrices are more efficient because they avoid operations on matrix elements that are known to be zero. -->
 
-The functions in [sparseMVN] rely on sparse matrix classes and functions defined in the [Matrix] package. The user creates the covariance or precision matrix as a sparse, symmetric [dsCMatrix] matrix, and computes the sparse Cholesky factor using the Matrix::Cholesky() function. Other than ensuring that the factor for the covariance or precision matrix is in the correct format, the [sparseMVN] functions behave in much the same way as the corresponding [mvtnorm] functions. Internally, [sparseMVN]  uses standard methods of computing the MVN density and simulating MVN random variables (see Section [1.1](#sec:algorithms){reference-type="ref" reference="sec:algorithms"}). Since a large proportion of elements in the matrix are zero, we need to store only the row and column indices, and the values, of the unique nonzero elements. The efficiency gains in [sparseMVN] come from storing the covariance or precision matrix in a compressed format without explicit zeros, and applying linear algebra routines that are optimized for those sparse matrix structures. [Matrix] calls sparse linear algebra routines that are implemented in the `CHOLMOD` library [@ChenDavis2008; @DavisHager1999; @DavisHager2009].
+<!-- 3.  When the precision matrix is initially available, the user can avoid the need to explicitly invert it into a covariance matrix. This feature of preserves sparsity, because the inverse of a sparse matrix is not necessarily sparse. -->
+
+<!-- 4.  The Cholesky factor of the matrix is computed once, before the first function call, and is not repeated with subsequent calls (as long as the matrix does not change). -->
+
+<!-- The functions in [sparseMVN] rely on sparse matrix classes and functions defined in the [Matrix] package. The user creates the covariance or precision matrix as a sparse, symmetric [dsCMatrix] matrix, and computes the sparse Cholesky factor using the Matrix::Cholesky() function. Other than ensuring that the factor for the covariance or precision matrix is in the correct format, the [sparseMVN] functions behave in much the same way as the corresponding [mvtnorm] functions. Internally, [sparseMVN]  uses standard methods of computing the MVN density and simulating MVN random variables (see Section [1.1](#sec:algorithms){reference-type="ref" reference="sec:algorithms"}). Since a large proportion of elements in the matrix are zero, we need to store only the row and column indices, and the values, of the unique nonzero elements. The efficiency gains in [sparseMVN] come from storing the covariance or precision matrix in a compressed format without explicit zeros, and applying linear algebra routines that are optimized for those sparse matrix structures. [Matrix] calls sparse linear algebra routines that are implemented in the `CHOLMOD` library [@ChenDavis2008; @DavisHager1999; @DavisHager2009]. -->
 
 # Background
 
@@ -78,7 +91,7 @@ $$\begin{aligned}
 
 ## MVN density computation and random number generation {#sec:algorithms}
 
-The two computationally intensive steps in evaluating $\log f(x)$ are computing $\log|\Sigma|$, and $z^\top z$, *without* explicitly inverting $\Sigma$ or repeating mathematical operations. But once we have $z$, computing the dot product $z^\top z$ is cheap. How one these steps *efficiently* in practice depends on whether the covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is available. For both cases, we start by finding a lower triangular matrix root: $\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$. Since $\Sigma$ and $\Sigma^{-1}$ are positive definite, we will use the Cholesky decomposition, which is the unique matrix root with all positive elements on the diagonal.
+The two computationally intensive steps in evaluating $\log f(x)$ are computing $\log|\Sigma|$, and $z^\top z$, *without* explicitly inverting $\Sigma$ or repeating mathematical operations. But once we have $z$, computing the dot product $z^\top z$ is cheap. How to perform these steps *efficiently* in practice depends on whether the covariance matrix $\Sigma$, or the precision matrix $\Sigma^{-1}$ is available. For both cases, we start by finding a lower triangular matrix root: $\Sigma=LL^\top$ or $\Sigma^{-1}=\Lambda\Lambda^\top$. Since $\Sigma$ and $\Sigma^{-1}$ are positive definite, we will use the Cholesky decomposition, which is the unique matrix root with all positive elements on the diagonal.
 
 With the Cholesky decomposition in hand, we compute the log determinant
 of $\Sigma$ by adding the logs of the diagonal elements of the factors.
@@ -108,7 +121,7 @@ The [Matrix] package [@R_Matrix] defines various classes for storing sparse matr
 
 ### An example
 
-To illustrate how sparse matrices require less memory resources when compressed than when stored densely, consider the following example, which borrows heavily from vignette("sparseHessianFD").
+To illustrate how sparse matrices require less memory resources when compressed than when stored densely, consider the following example, which borrows heavily from the vignette of the [sparseHessianFD] package.
 
 Suppose we have a dataset of $N$ households, each with $T$ opportunities to purchase a particular product. Let $y_i$ be the number of times household $i$ purchases the product, out of the $T$ purchase opportunities, and let $p_i$ be the probability of purchase. The heterogeneous parameter $p_i$ is the same for all $T$ opportunities, so $y_i$ is a binomial random variable.
 
@@ -199,7 +212,7 @@ In both cases, the number of nonzeros is the same.  There are `r nels1` elements
   structures store row and column indices of the nonzero values, they
   may use more memory than dense storage if the total number of
   elements is small}  If $N=`r scales::comma(Q)`$ and $k=`r k`$, then
-$M=$`r scales::comma(nv2)`, with more than $`r floor(nels2/10^6)`$ million
+$M=$ `r scales::comma(nv2)`, with more than $`r floor(nels2/10^6)`$ million
 elements in the Hessian.  However, only `r scales::comma(nnz2)` of those elements are
 nonzero, with `r scales::comma(nnz2LT)` unique values in the lower
 triangle.  The dense matrix requires `r format(object.size(A2),units='Mb')` of RAM,
@@ -213,12 +226,12 @@ This example is relevant because, when evaluated at the posterior mode, the Hess
 
 The signatures of the key [sparseMVN] functions are
 
-```{r, eval=FALSE, prompt=FALSE}
+```{r, eval=FALSE, echo=TRUE, prompt=FALSE}
 rmvn.sparse(n, mu, CH, prec=TRUE, log=TRUE)
 dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
 ```
 
-`rmvn.sparse()` returns a matrix $x$ with $n$ rows and `length(mu)` columns. `dmvn.sparse()` returns a vector of length n: densities if `log=FALSE` , and log densities if `log=TRUE`.
+[rmvn.sparse] returns a matrix $x$ with $n$ rows and `length(mu)` columns. [dmvn.sparse] returns a vector of length n: densities if `log=FALSE` , and log densities if `log=TRUE`.
 
 | | |
 |-----|-----|
@@ -228,17 +241,13 @@ dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
 | **prec** |Logical value that identifies CH as the Cholesky decomposition of either a covariance ($\Sigma$, ) or precision($\Sigma^{-1}$, ) matrix.|
 | **n** |Number of random samples to be generated.|
 | **log** |If `log=TRUE`, the log density is returned.|
+[Table 1: Arguments to [dmvn.sparse] and [rmvn.sparse]]
 
-Table [1](#tab:args){reference-type="ref" reference="tab:args"} describes the function arguments. These functions do require the user to compute the Cholesky decomposition `CH` beforehand, but this needs to be done only once (as long as $\Sigma$ or $\Sigma^{-1}$ does not change). `CH` should be computed using [Cholesky()], whose first argument is a sparse symmetric matrix stored as a [dsCMatrix] object. As far as we know, there is no particular need to deviate from the defaults of the remaining arguments. If [Cholesky()] uses a fill-reducing permutation to compute `CH` , the sparseMVN functions will handle that directly, with no additional user intervention required. The chol() function in base R should not be used.
+[dmvn.sparse] and  [rmvn.sparse]  require the user to compute the Cholesky decomposition `CH` beforehand, but this needs to be done only once (as long as $\Sigma$ or $\Sigma^{-1}$ does not change). `CH` should be computed using [Cholesky()], whose first argument is a sparse symmetric matrix stored as a [dsCMatrix] object. As far as we know, there is no particular need to deviate from the defaults of the remaining arguments. If [Cholesky()] uses a fill-reducing permutation to compute `CH` , the sparseMVN functions will handle that directly, with no additional user intervention required. The [chol()] function in base R should not be used.
 
 ## An example {#sec:example}
 
-Suppose we want to generate samples from an MVN approximation to the
-posterior distribution of our example model from Section
-[1.2](#sec:sparse){reference-type="ref" reference="sec:sparse"}.
-sparseMVN includes functions to simulate data for the example (binary.sim()), and to compute
-the log posterior density (binary.f()), gradient (binary.grad()), and Hessian (binary.hess()).  trustOptim::trust.optim() in [trustOptim] is a nonlinear optimizer that estimates
-the curvature of the objective function using a sparse Hessian.
+Suppose we want to generate samples from an MVN approximation to the posterior distribution of our example model from Section [1.2](#sec:sparse){reference-type="ref" reference="sec:sparse"}.  [sparseMVN] includes functions to simulate data for the example (`binary.sim()`), and to compute the log posterior density (`binary.f()`), gradient (`binary.grad()`), and Hessian (`binary.hess()`).  `trustOptim::trust.optim()` in [trustOptim] is a nonlinear optimizer that estimates the curvature of the objective function using a sparse Hessian.
 
 
 ```{r, results='hide'}
@@ -255,9 +264,7 @@ opt <- trustOptim::trust.optim(start,
 ```
 
 
-The calls to `trustOptim::trust.optim()`  return the posterior mode, and the Hessian evaluated at the
-mode. These results serve as the mean and the negative precision of the
-MVN approximation to the posterior distribution of the model.
+The calls to `trustOptim::trust.optim()` return the posterior mode, and the Hessian evaluated at the mode. These results serve as the mean and the negative precision of the MVN approximation to the posterior distribution of the model.
 
 
 ```{r}
@@ -267,23 +274,14 @@ H <- -opt[["hessian"]]
 CH <- Cholesky(H)
 ```
 
-
-
-We can then sample from the posterior using an MVN approximation, and
-compute the MVN log density for each sample.
+We can then sample from the posterior using an MVN approximation, and compute the MVN log density for each sample.
 
 ```r
 samples <- rmvn.sparse(R, pm, CH, prec=TRUE)
 logf <- dmvn.sparse(samples, pm, CH, prec=TRUE)
 ```
 
-
-The ability to accept a precision matrix, rather than having to invert
-it to a covariance matrix, is a valuable feature of sparseMVN . This is because
-the inverse of a sparse matrix is not necessarily sparse. In the
-following chunk, we invert the Hessian, and drop zero values to maintain
-any remaining sparseness. Note that there are `r scales::comma(102^2)`  total elements in
-the Hessian.
+The ability to accept a precision matrix, rather than having to invert it to a covariance matrix, is a valuable feature of [sparseMVN]. This is because the inverse of a sparse matrix is not necessarily sparse. In the following chunk, we invert the Hessian, and drop zero values to maintain any remaining sparseness. Note that there are `r scales::comma(102^2)` total elements in the Hessian.
 
 ```r
 Matrix::nnzero(H)
@@ -291,7 +289,7 @@ Hinv <- Matrix::drop0(solve(H))
 Matrix::nnzero(Hinv)
 ```
 
-Nevertheless, we should check that the log densities from dmvn.sparse() correspond to
+Nevertheless, we should check that the log densities from [dmvn.sparse] correspond to
 those that we would get from [dmvnorm].
 
 
@@ -322,16 +320,13 @@ tab2 <- as_tibble(runtimes) %>%
 
 # Timing
 
-In this section we show the efficiency gains from sparseMVN by comparing the run times between rmvn.sparse() and [rmvnorm], and between dmvn.sparse() and [dmvnorm] . In these tests, we construct covariance/precision matrices with the same structure as the Hessian of the log posterior density of the example model in Section [2.1](#sec:example){reference-type="ref" reference="sec:example"}.  Parameters are ordered such that the matrix has a [block-arrow pattern](#blockarrow).
+In this section we show the efficiency gains from sparseMVN by comparing the run times between [rmvn.sparse] and `mvtnorm::rmvnorm`, and between [dmvn.sparse] and `mvtnorm::dmvnorm`. In these tests, we construct covariance/precision matrices with the same structure as the Hessian of the log posterior density of the example model in Section [2.1](#sec:example){reference-type="ref" reference="sec:example"}.  Parameters are ordered such that the matrix has a [block-arrow pattern](#blockarrow).
 
 
-The size and sparsity of the test matrices vary through manipulation of the number of blocks ($N$), the size of each block ($k$), and the number of rows/columns in the margin (also $k$). Each test matrix has $(N+1)k$ rows and columns.  Table [2](#tab:cases){reference-type="ref" reference="tab:cases"} summarizes the case conditions.
+The size and sparsity of the test matrices vary through manipulation of the number of blocks ($N$), the size of each block ($k$), and the number of rows/columns in the margin (also $k$). Each test matrix has $(N+1)k$ rows and columns.  Table \@ref(fig:cases)  summarizes the case conditions.
 
 
-```{r, echo=FALSE, fig.cap="Cases for timing comparison. $N$ and $k$ refer, respectively, to the number of blocks in the block-arrow structure (analogous to heterogeneous units in the  binary choice example), and the size of each block.  The total number of variables is $M=(N+1)k$, and the total number of elements in the matrix is $M^2$. The three rightmost columns present the number of nonzeros in the full matrix and lower triangle, and the sparsity (proportion of matrix elements that are nonzero)."}
-
-## tmp <- c("\\multirow{8}{*}{k=2}",rep(NA,7),
-##          "\\multirow{8}{*}{k=4}",rep(NA,7))
+```{r cases, echo=FALSE, fig.cap="Cases for timing comparison. $N$ and $k$ refer, respectively, to the number of blocks in the block-arrow structure (analogous to heterogeneous units in the  binary choice example), and the size of each block.  The total number of variables is $M=(N+1)k$, and the total number of elements in the matrix is $M^2$. The three rightmost columns present the number of nonzeros in the full matrix and lower triangle, and the sparsity (proportion of matrix elements that are nonzero)."}
 cases %>%
   select(k,N, nvars,nels,
          nnz, nnzLT, pct.nnz) %>%
@@ -349,7 +344,7 @@ sm <- with(tmp, c(dense_cov,sparse_cov))
 ```
 
 
-Figure~\ref{fig:densRand} compares mean run times to compute 1,000 MVN densities, and generate 1,000
+Figure \@ref(fig:densRand) compares mean run times to compute 1,000 MVN densities, and generate 1,000
 MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
 [dmvnorm] and [rmvnorm].  Times were collected over 200 replications on a
   2013-vintage Mac Pro with a 12-core 2.7 GHz Intel Xeon E5 processor
@@ -364,12 +359,12 @@ MVN samples, using rmvn.sparse() and dmvn.sparse() from sparseMVN, and
   with the number of variables. In this example,
   storage and computation requirements for the sparse matrix grow linearly with the number
   of variables, so the [sparseMVN] run times grow linearly as
-  well \citep[sec.~4]{BraunDamien2016}.  The comparative advantage of [sparseMVN] increases with
+  well [@BraunDamien2016].  The comparative advantage of [sparseMVN] increases with
   the sparsity of the covariance matrix.[^5]
 
 
 
-```{r, echo=FALSE, fig.width=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and dmvn.sparse(), while random samples were generated using [rmvnorm] and rmvn.sparse()."}
+```{r densRand, echo=FALSE, fig.width=5, fig.cap="Mean computation time for simulating 1,000 MVN samples, and computing 1,000 MVN densities, averaged over 200 replications. Densities were computed using [dmvnorm] and [dmvn.sparse], while random samples were generated using [rmvnorm] and [rmvn.sparse]."}
 
 DF1 <- tab1 %>%
   dplyr::mutate(stat=forcats::fct_recode(stat, random='rand')) %>%
@@ -393,12 +388,12 @@ print(P1)
 
 ```
 
-The sparseMVN functions always require a sparse Cholesky decomposition of the covariance or precision matrix, and the [mvtnorm] functions require a dense precision matrix to be inverted into a dense covariance matrix. Figure [2](#fig:cholSolve){reference-type="ref" reference="fig:cholSolve"} compares the computation times of these preparatory steps. There are three cases to consider: inverting a dense matrix using the solve() function, decomposing a sparse matrix using Matrix::Cholesky(), and decomposing a dense matrix using chol(). Applying chol() to a dense function is not a required operation in advance of calling [dmvnorm] or [rmvnorm], but those functions will invoke some kind of decomposition internally. We include it in our comparison because it comprises a substantial part of the computation time. The decomposition and inversion operations on the dense matrices grow cubically as the size of the matrix increases. The sparse Cholesky decomposition time is negligible. For example, the mean run time for the $N=500$, $k=4$ case is about 0.39 ms.
+The sparseMVN functions always require a sparse Cholesky decomposition of the covariance or precision matrix, and the [mvtnorm] functions require a dense precision matrix to be inverted into a dense covariance matrix. Figure \@ref(fig:cholSolve) compares the computation times of these preparatory steps. There are three cases to consider: inverting a dense matrix using [solve()], decomposing a sparse matrix using Matrix::[Cholesky()], and decomposing a dense matrix using [chol()].  Applying [chol()] to a dense matrix is not a required operation in advance of calling [dmvnorm] or [rmvnorm], but those functions will invoke some kind of decomposition internally. We include it in our comparison because it comprises a substantial part of the computation time. The decomposition and inversion operations on the dense matrices grow cubically as the size of the matrix increases. The sparse Cholesky decomposition time is negligible. For example, the mean run time for the $N=500$, $k=4$ case is about 0.39 ms.
 
 
 
 
-```{r, DF2, echo=FALSE, fig.width=5, fig.keep='all', fig.cap="Computation time for Cholesky decomposition of sparse and dense matrices, and inversion of dense matrices."}
+```{r cholSolve,  echo=FALSE, fig.width=5, fig.keep='all', fig.cap="Computation time for Cholesky decomposition of sparse and dense matrices, and inversion of dense matrices."}
 
 DF2 <- tab2 %>%
     dplyr::rename(`dense inversion`=solve_dense,
