@@ -318,7 +318,7 @@ tab2 <- as_tibble(runtimes) %>%
 
 
 
-# Timing
+# Performance
 
 In this section we show the efficiency gains from sparseMVN by comparing the run times between [rmvn.sparse] and `mvtnorm::rmvnorm`, and between [dmvn.sparse] and `mvtnorm::dmvnorm`. In these tests, we construct covariance/precision matrices with the same structure as the Hessian of the log posterior density of the example model in Section [2.1](#sec:example){reference-type="ref" reference="sec:example"}.  Parameters are ordered such that the matrix has a [block-arrow pattern](#blockarrow).
 
