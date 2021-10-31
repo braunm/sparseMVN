@@ -1,3 +1,7 @@
+# sparseMVN 0.2.2.9000
+
+- some vignette cleanup
+
 # sparseMVN 0.2.2
 
 -  Added links to new pkgdown website
