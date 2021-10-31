@@ -1,6 +1,7 @@
 sparseMVN 0.2.2
 
 -   Added links to new pkgdown website
+-   Suggests packages used conditionally in tests
 -   Other minor fixes
 
 sparseMVN 0.2.1.2

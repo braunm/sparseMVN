@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Multivariate normal functions with sparse covariance/precision matrix. — dmvn.sparse • sparseMVN</title>
+<title>Compute density  from multivariate normal distribution — dmvn.sparse • sparseMVN</title>
 
 
 <!-- jquery -->
@@ -39,11 +39,8 @@
 
 
 
-<meta property="og:title" content="Multivariate normal functions with sparse covariance/precision matrix. — dmvn.sparse" />
-<meta property="og:description" content="Efficient sampling and density calculation from a multivariate
-normal,
-when the covariance or precision matrix is sparse. These functions are
-designed for MVN samples of very large dimension." />
+<meta property="og:title" content="Compute density  from multivariate normal distribution — dmvn.sparse" />
+<meta property="og:description" content="Compute density  from multivariate normal distribution" />
 
 
 
@@ -138,16 +135,13 @@ designed for MVN samples of very large dimension." />
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Multivariate normal functions with sparse covariance/precision matrix.</h1>
+    <h1>Compute density  from multivariate normal distribution</h1>
     <small class="dont-index">Source: <a href='https://github.com/braunm/sparseMVN/blob/master/R/dmvn-sparse.R'><code>R/dmvn-sparse.R</code></a></small>
     <div class="hidden name"><code>dmvn.sparse.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Efficient sampling and density calculation from a multivariate
-normal,
-when the covariance or precision matrix is sparse. These functions are
-designed for MVN samples of very large dimension.</p>
+    <p>Compute density  from multivariate normal distribution</p>
     </div>
 
     <div class="ref-usage sourceCode"><pre class='sourceCode r'><code><span class='fu'>dmvn.sparse</span><span class='op'>(</span><span class='va'>x</span>, <span class='va'>mu</span>, <span class='va'>CH</span>, prec <span class='op'>=</span> <span class='cn'>TRUE</span>, log <span class='op'>=</span> <span class='cn'>TRUE</span><span class='op'>)</span></code></pre></div>
@@ -180,12 +174,15 @@ matrix.  If false, it is the decomposition for the covariance matrix.</p></td>
     </tr>
     </table>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>A density or log density for each row of x</p>
     <h2 class="hasAnchor" id="details"><a class="anchor" href="#details"></a>Details</h2>
 
     
 
-<p>These functions use sparse matrix operations to sample from, or compute the
-log density of, a multivariate normal distribution.  The user must compute
+<p>This function use sparse matrix operations to compute the
+log density of a multivariate normal distribution.  The user must compute
 the Cholesky decomposition first, using the Cholesky function in the Matrix
 package.  This function operates on a sparse symmetric matrix, and returns
 an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm
