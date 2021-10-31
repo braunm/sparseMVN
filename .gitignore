@@ -22,3 +22,7 @@ README.html
 _region_*
 cache
 inst/doc/*
+doc
+Meta
+/doc/
+/Meta/

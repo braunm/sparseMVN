@@ -1,0 +1,29 @@
+---
+title: "sparseMVN: The Theory"
+bibliography:
+- sparseMVN.bib
+---
+
+
+# Using the sparseMVN package
+
+The signatures of the key sparse matrix functions are
+
+
+
+rmvn.sparse(n, mu, CH, prec=TRUE)
+dmvn.sparse(x, mu, CH, prec=TRUE, log=TRUE)
+
+| Parameter | Description |
+|-------|-------|
+| **x** | A numeric matrix. Each row is an MVN sample.|
+|      **mu** | A numeric vector. The mean of the MVN random variable.|
+|      **CH**  |Either a *dCHMsimpl* or *dCHMsuper* object representing the Cholesky decomposition of the covariance/precision matrix.|
+|    **prec** | Logical value that identifies CH as the Cholesky decomposition of either a covariance ($\Sigma$, ) or precision($\Sigma^{-1}$, ) matrix.|
+|       **n** | Number of random samples to be generated.|
+|     **log** |  If , the log density is returned.|
+
+
+The only part of this that is substantially different from other standard MVN functions is CH, which must be a *dCHMsimpl* or *dCHMsuper* matrix computed from the **Matrix** package.
+
+If your matrix is structurally sparse (lots of zeros), but stored as a dense R matrix, you first need to get it into a sparse format.

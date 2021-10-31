@@ -1,0 +1,28 @@
+url: https://braunm.github.io/sparseMVN
+
+template:
+  params:
+    bootswatch: spacelab
+    ganalytics: G-9Q2M3WL4Z1
+
+authors:
+  Michael Braun:
+    href: https://braunm.github.io
+
+reference:
+- title: Package overview
+  contents:
+    - sparseMVN-package
+- title: The main event
+  desc: "The 'workhorse' functions for sampling and computing densities."
+  contents:
+    - dmvn.sparse
+    - rmvn.sparse
+- title: Data and functions for examples
+  desc: "Functions and data used in the vignettes and examples"
+  contents:
+    - starts_with("binary")
+links:
+  - text:  Browse the source code at
+news:
+  one_page: true

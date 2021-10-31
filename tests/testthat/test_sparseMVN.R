@@ -3,13 +3,13 @@ context("sparseMVN")
 
 test_that("sparseMVN", {
 
-    require(mvtnorm)
+
     set.seed(123)
     N <- 10 ## number of samples
     m <- 15  ## number of blocks in sparse covariance matrix
     p <- 3 ## size of each block
-    k <- 7  ## 
-    
+    k <- 7  ##
+
     ## build block-arrow covariance/precision matrix for test
 
     mu <- seq(-3,3,length=p*m+k)
@@ -18,23 +18,27 @@ test_that("sparseMVN", {
     Q3 <- rbind(Q2,cbind(Matrix(rnorm(k*m*p),k,m*p),Diagonal(k)))
     CV <- Matrix::tcrossprod(Q3)
     chol.CV <- Matrix::Cholesky(CV)  ## creates a dCHMsimpl object
-    
+
     ## convert to base R for comparison
 
     CV.base <- as(CV, "matrix")
+
+
+
+
 
     ## sample N MVN's
 
     for (prec in c(FALSE, TRUE)) {
         x.sp <- rmvn.sparse(N, mu, chol.CV,prec=prec)
-        
+
         ## check dimensions
-        
+
         ## each row is a draw
         ## each col is a variable
-        expect_equal(NROW(x.sp), N)  
-        expect_equal(NCOL(x.sp), length(mu))  
-        
+        expect_equal(NROW(x.sp), N)
+        expect_equal(NCOL(x.sp), length(mu))
+
         ## computing log densities using dmvn.sparse
         d.sp <- dmvn.sparse(x.sp, mu, chol.CV, prec=prec)
 
@@ -43,10 +47,14 @@ test_that("sparseMVN", {
         } else {
             mat <- CV.base
         }
-         
-        ## computing log densities using dmvnorm
-        d.dns <- dmvnorm(x.sp, mu, mat, log=TRUE)
-        expect_equal(d.sp, d.dns)
+
+        if(require("mvtnorm")) {
+          ## computing log densities using dmvnorm
+          d.dns <- mvtnorm::dmvnorm(x.sp, mu, mat, log=TRUE)
+          expect_equal(d.sp, d.dns)
         }
+
+    }
+
+
 })
-          

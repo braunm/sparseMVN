@@ -4,7 +4,7 @@
 ^\\.Rbuildignore$
 ^\\.Rhistory$
 ^\\.gitignore$
-^\\.DS\_Store
+^\\.DS_Store
 README\.md
 inst/old/*
 data-raw/*
@@ -28,3 +28,10 @@ vignettes/\_region\_.*
 inst/doc/\.install.extras
 
 
+^doc$
+^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+
+vignettes/theory.*

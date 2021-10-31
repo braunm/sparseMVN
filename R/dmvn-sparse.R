@@ -1,21 +1,17 @@
-## Copyright (C) 2013-2017 Michael Braun
-#' @rdname rmvn.sparse
-#' @title Sample from multivariate normal distribution
-#' @aliases rmvn.sparse
-#' @description Efficient sampling and density calculation from a multivariate
-#' normal,
-#' when the covariance or precision matrix is sparse. These functions are
-#' designed for MVN samples of very large dimension.
-#' @param n number of samples
+#' @rdname dmvn.sparse
+#' @title Compute density  from multivariate normal distribution
+#' @param x numeric matrix, where each row is an MVN sample.
 #' @param mu mean (numeric vector)
 #' @param CH An object of class dCHMsimpl or dCHMsuper that represents
 #' the Cholesky factorization of either the precision (default) or covariance
 #' matrix.  See details.
 #' @param prec If TRUE, CH is the Cholesky decomposition of the precision
 #' matrix.  If false, it is the decomposition for the covariance matrix.
-#' @return A matrix of samples from an MVN distribution (one in each row)
+#' @param log If TRUE (default), returns the log density, else returns density.
+#' @return A density or log density for each row of x
 #' @section Details:
-#' This function uses sparse matrix operations to sample from a multivariate normal distribution.  The user must compute
+#' This function use sparse matrix operations to compute the
+#' log density of a multivariate normal distribution.  The user must compute
 #' the Cholesky decomposition first, using the Cholesky function in the Matrix
 #' package.  This function operates on a sparse symmetric matrix, and returns
 #' an object of class dCHMsimpl or dCHMsuper (this depends on the algorithm
@@ -41,36 +37,40 @@
 #'    y <- dmvn.sparse(x[1,],rep(0,p*m+k), CH, FALSE)
 #'
 #' @export
-rmvn.sparse <- function(n, mu, CH, prec=TRUE) {
+dmvn.sparse <- function(x, mu, CH, prec=TRUE, log=TRUE) {
 
-    if (is.na(match(class(CH),c("dCHMsimpl","dCHMsuper")))) {
-        stop("CH must be an object of class 'dCHMsimpl' or 'dCHMsuper'")
+    if (is.vector(x) | (is.atomic(x) & NCOL(x)==1)) {
+        x <- matrix(x,nrow=1)
     }
+
     k <- length(mu)
+    n <- NROW(x)
     if (!(k>0)) {
         stop("mu must have positive length")
     }
-    if (!(n>0)) {
-        stop("n must be positive")
-    }
+
     if (!(k==dim(CH)[1])) {
         stop("dimensions of mu and CH do not conform")
+    }
+    if (k!=NCOL(x)) {
+        stop("x must have same number of columns as the length of mu")
     }
     if (!is.logical(prec)) {
         stop("prec must be either TRUE or FALSE")
     }
-    x <- rnorm(n*k)
-    dim(x) <- c(k,n)
-    A <- Matrix::expand(CH)
+    A <- expand(CH)
+    detL <- sum(log(Matrix::diag(A$L)))
+    C <- -0.918938533204672669541*k ## -k*log(2*pi)/2
+    xmu <- t(x)-mu
+    z <- as.matrix(A$P %*% xmu)
 
     if (prec) {
-        y <- solve(Matrix::t(A$L),x) ## L'y = x
+        y <- Matrix::crossprod(A$L,z)  ## L' %*% x
+        log.dens <- C + detL - Matrix::colSums(y*y)/2
     } else {
-        y <- A$L %*% x
+        y <- solve(A$L, z) ## Ly = x
+        log.dens <- C - detL - Matrix::colSums(y*y)/2
     }
 
-    y <- as(Matrix::crossprod(A$P,y),"matrix") ## P' %*% y
-    y <- y + mu
-    return(t(y))
-
+    if (log) return (log.dens) else return (exp(log.dens))
 }

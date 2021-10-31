@@ -2,11 +2,12 @@ Package: sparseMVN
 Type: Package
 Title: Multivariate Normal Functions for Sparse Covariance and Precision
     Matrices
-Version: 0.2.1.1
-Date: 2018-03-26
-Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre","cph"))
+Version: 0.2.2
+Date: 2021-10-19
+Authors@R: person(given="Michael", family="Braun", email="braunm@smu.edu", role=c("aut","cre","cph"),comment=c(ORCID="0000-0003-4774-2119"))
 Maintainer: Michael Braun <braunm@smu.edu>
-URL: http://www.smu.edu/Cox/Departments/FacultyDirectory/BraunMichael
+URL: https://braunm.github.io/sparseMVN/, https://github.com/braunm/sparseMVN/
+BugReports: https://github.com/braunm/sparseMVN/issues/
 Description: Computes multivariate normal (MVN) densities, and
     samples from MVN distributions, when the covariance or
     precision matrix is sparse.
@@ -14,20 +15,20 @@ License: MPL (>= 2.0)
 Depends:
     R (>= 3.4.0)
 Imports:
-    Matrix (>= 1.2.12),
+    Matrix (>= 1.3),
     methods
 Suggests:
-    mvtnorm (>= 1.0.6),
-    plyr,
+    dplyr (>= 1.0),
+    tidyr (>= 1.1),
+    ggplot2 (>= 3.3),
+    forcats (>= 0.5),
+    mvtnorm (>= 1.0.6)	,
     knitr,
+    bookdown,
+    kableExtra,
     testthat,
-    dplyr (>= 0.5.0),
     scales,
-    reshape2,
-    trustOptim (>= 0.8.5),
-    xtable (>= 1.8),
-    ggplot2 (>= 2.2.1),
-    tidyr (>= 0.6.1)
-Roxygen: list(wrap=FALSE)
+    trustOptim (>= 0.8.5)
+Encoding: UTF-8
 VignetteBuilder: knitr
-RoxygenNote: 7.1.0
+RoxygenNote: 7.1.2
